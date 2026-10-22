@@ -1,0 +1,12 @@
+# Bundle patch for dsh-session-workspace-organizer.
+#
+# The row mounts the Host plugin and the Web client together: the Host half
+# provides the relocate / organize / session-management commands and the
+# per-session output folder; the client half registers Settings -> Workspaces.
+- insert:
+    - id: workspace-organizer
+      name: dsh-session-workspace-organizer
+      config:
+        sessionFolders: true
+        guardRootWrites: true
+        sessionsDirName: sessions

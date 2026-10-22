@@ -1,0 +1,73 @@
+{
+  "name": "dsh-session-workspace-organizer",
+  "version": "1.0.0",
+  "description": "Move a DSH workspace folder to a new path and give every new session its own output folder under sessions/.",
+  "type": "module",
+  "main": "index.js",
+  "icon": "./icon.svg",
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg"
+  },
+  "files": [
+    "index.js",
+    "lib",
+    "client.js",
+    "cordis.patch.yml",
+    "icon.svg",
+    "locale/*.json",
+    "README.md",
+    "README.zh.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "deepseek-harness",
+    "deepseek",
+    "workspace",
+    "relocate",
+    "session-folders",
+    "organizer"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-api-remotes",
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-settings-general",
+        "@deepseek-ai/dsh-client-ui-workspace",
+        "@deepseek-ai/dsh-client-ui-commands"
+      ]
+    }
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "check": "node --check index.js && node --check client.js && node --check lib/fs-ops.js && node --check lib/session-logs.js",
+    "test": "npm run check",
+    "pack": "npm pack"
+  },
+  "author": {
+    "name": "dream-fish69",
+    "url": "https://github.com/dream-fish69"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/dream-fish69/dsh-session-workspace-organizer.git"
+  },
+  "homepage": "https://github.com/dream-fish69/dsh-session-workspace-organizer#readme",
+  "bugs": {
+    "url": "https://github.com/dream-fish69/dsh-session-workspace-organizer/issues"
+  }
+}

@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Workspace Organizer",
+    "description": "Move workspace folders and give every new session its own output directory under sessions/."
+  }
+}
