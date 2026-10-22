@@ -1,0 +1,51 @@
+name: publish
+
+# Publishes to npm when a `v*` tag is pushed.
+#
+# Authentication uses npm Trusted Publishing (OIDC): no NPM_TOKEN secret is needed.
+# Set it up once in the npm package settings: Package -> Settings -> Publishing access
+# -> Trusted Publisher -> GitHub Actions, with this repository and `publish.yml`.
+# Do not add a NODE_AUTH_TOKEN secret, or npm falls back to the token path and
+# bypass-2FA granular tokens are rejected with E_STAGE_REQUIRED.
+#
+# The very first version of a brand-new package may still have to be published
+# once locally (`npm login` + `npm publish`); after that this workflow owns it.
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+
+      - name: Check syntax
+        run: npm run check
+
+      - name: Tag must match package.json version
+        run: |
+          node -e '
+            const v = require("./package.json").version;
+            const t = (process.env.GITHUB_REF_NAME || "").replace(/^v/, "");
+            if (v !== t) {
+              console.error(`tag ${t} does not match package.json ${v}`);
+              process.exit(1);
+            }
+            console.log(`publishing ${v}`);
+          '
+
+      - name: Publish
+        run: npm publish --provenance --access public
