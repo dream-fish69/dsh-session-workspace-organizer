@@ -53,8 +53,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "check": "node --check index.js && node --check client.js && node --check lib/fs-ops.js && node --check lib/session-logs.js",
-    "test": "npm run check",
+    "check": "node --check index.js && node --check client.js && node --check lib/fs-ops.js && node --check lib/session-logs.js && node --test tests/fs-ops.test.mjs tests/session-logs.test.mjs",
+    "test": "node --test tests/fs-ops.test.mjs tests/session-logs.test.mjs",
     "pack": "npm pack"
   },
   "author": {

@@ -19,6 +19,9 @@ window.__ModuleLoader__.load({
         'sessions.title': 'Session workspaces',
         'sessions.note': 'Move an inactive session to another workspace. The session log, its sessions/ folder with all files, and files the session wrote outside sessions/ (from write/edit records) move together. Same-name files already in the target are not overwritten and are listed. Shell-created files are not tracked. Restart DSH afterwards.',
         'sessions.empty': 'No sessions found.',
+        'sessions.search': 'Search sessions…',
+        'sessions.noMatch': 'No matching sessions.',
+        'sessions.more': 'Showing the first {n}; type to narrow the list.',
         'sessions.current': 'Current',
         'sessions.move': 'Move to workspace…',
         'sessions.workspace': 'Workspace',
@@ -29,6 +32,34 @@ window.__ModuleLoader__.load({
         'sessionMove.busy': 'Moving…',
         'sessionMove.done': 'Session moved.',
         'sessionMove.noTarget': 'No other workspace is available.',
+        'sessionMove.legacy': 'Legacy session folder (optional)',
+        'sessionMove.legacyHint': 'Folder name under the source workspace sessions/',
+        'sessionMove.project': 'Project folder (optional)',
+        'sessionMove.projectHint': 'Folder name at the source workspace root',
+        'sessionMove.planHint': 'Preview first. Unresolved files/folders can be assigned a destination or canceled.',
+        'sessionMove.preview': 'Preview unresolved files',
+        'sessionMove.planBusy': 'Scanning…',
+        'sessionMove.planFailed': 'Could not build the migration plan.',
+        'sessionMove.planTarget': 'Target session folder',
+        'sessionMove.unknownNote': 'Unresolved items default to cancel. Choose a destination or leave them in place.',
+        'sessionMove.unknownNone': 'Nothing unresolved; all files have a destination.',
+        'sessionMove.folder': 'Folder',
+        'sessionMove.file': 'File',
+        'sessionMove.reason': 'Reason',
+        'sessionMove.reason.relative-path': 'relative path (write-time cwd unknown)',
+        'sessionMove.reason.outside-workspace': 'written outside the source workspace',
+        'sessionMove.reason.target-conflict': 'target file already exists',
+        'sessionMove.reason.unmarked-folder': 'legacy folder without .dsh-session marker',
+        'sessionMove.reason.project-folder': 'project folder selected manually',
+        'sessionMove.files': 'files',
+        'sessionMove.bytes': 'bytes',
+        'sessionMove.dest.cancel': 'Cancel this item',
+        'sessionMove.dest.session': 'Target session folder',
+        'sessionMove.dest.workspace': 'Target workspace root',
+        'sessionMove.dest.custom': 'Custom directory…',
+        'sessionMove.customHint': 'Destination directory',
+        'sessionMove.pick': 'Choose directory…',
+        'sessionMove.start': 'Start migration',
         'sessions.selected': '{n} selected',
         'sessions.selectAll': 'Select all',
         'sessions.clear': 'Clear',
@@ -106,6 +137,9 @@ window.__ModuleLoader__.load({
         'sessions.title': '会话归属',
         'sessions.note': '把未运行的会话移动到另一个工作区：会话日志、sessions/ 专属文件夹及其中所有文件、以及会话通过 write/edit 在 sessions/ 之外写到工作区的文件都会一起移动。目标已有同名文件时不覆盖，会列出冲突；shell 命令直接创建的文件不在记录里。完成后重启 DSH。',
         'sessions.empty': '没有找到会话。',
+        'sessions.search': '搜索会话…',
+        'sessions.noMatch': '没有匹配的会话。',
+        'sessions.more': '只显示前 {n} 个，继续输入筛选。',
         'sessions.current': '当前',
         'sessions.move': '移动到工作区…',
         'sessions.workspace': '工作区',
@@ -116,6 +150,34 @@ window.__ModuleLoader__.load({
         'sessionMove.busy': '正在移动…',
         'sessionMove.done': '会话移动完成。',
         'sessionMove.noTarget': '没有其他工作区可移动。',
+        'sessionMove.legacy': '旧会话文件夹（可选）',
+        'sessionMove.legacyHint': '源工作区 sessions/ 下的旧目录名',
+        'sessionMove.project': '项目目录（可选）',
+        'sessionMove.projectHint': '源工作区根目录下的项目目录名',
+        'sessionMove.planHint': '先预览：无法确定去向的文件/目录由你选择去向，或取消迁移。',
+        'sessionMove.preview': '预览无法确定去向的文件',
+        'sessionMove.planBusy': '正在扫描…',
+        'sessionMove.planFailed': '无法生成迁移计划。',
+        'sessionMove.planTarget': '目标会话目录',
+        'sessionMove.unknownNote': '未确定去向的条目默认取消；选择去向或保留在原位置。',
+        'sessionMove.unknownNone': '没有无法确定去向的文件，全部有明确去向。',
+        'sessionMove.folder': '目录',
+        'sessionMove.file': '文件',
+        'sessionMove.reason': '原因',
+        'sessionMove.reason.relative-path': '相对路径，写入时 cwd 不确定',
+        'sessionMove.reason.outside-workspace': '写在源工作区之外',
+        'sessionMove.reason.target-conflict': '目标已有同名文件',
+        'sessionMove.reason.unmarked-folder': '没有 .dsh-session 标记的历史目录',
+        'sessionMove.reason.project-folder': '手动选择的项目目录',
+        'sessionMove.files': '个文件',
+        'sessionMove.bytes': '字节',
+        'sessionMove.dest.cancel': '取消迁移此条',
+        'sessionMove.dest.session': '目标会话目录',
+        'sessionMove.dest.workspace': '目标工作区根目录',
+        'sessionMove.dest.custom': '自定义目录…',
+        'sessionMove.customHint': '目标目录',
+        'sessionMove.pick': '选择目录…',
+        'sessionMove.start': '开始迁移',
         'sessions.selected': '已选 {n} 个',
         'sessions.selectAll': '全选',
         'sessions.clear': '清空',
@@ -188,6 +250,13 @@ window.__ModuleLoader__.load({
 .wso-page h2{margin:0 0 8px;font-size:18px;font-weight:600;line-height:26px}
 .wso-intro{margin:0 0 10px;color:var(--dsw-alias-label-secondary)}
 .wso-note{margin:0 0 8px;color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px}
+.wso-plan{margin:10px 0;padding:10px;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;background:var(--dsw-alias-bg-layer-1);max-height:320px;overflow:auto}
+.wso-plan-item{padding:8px 0;border-top:1px solid var(--dsw-alias-border-l1)}
+.wso-plan-item:first-of-type{border-top:0;padding-top:0}
+.wso-plan-row{display:flex;gap:8px;align-items:center;margin-top:6px}
+.wso-plan-row select{flex:1;min-width:0}
+.wso-plan-custom{display:flex;gap:8px;margin-top:6px}
+.wso-plan-custom input{flex:1;min-width:0}
 .wso-warn{margin:10px 0;padding:8px 10px;border:1px solid var(--dsw-alias-state-warn-primary);border-radius:8px;color:var(--dsw-alias-state-warn-primary);font-size:12px;line-height:18px}
 .wso-empty{color:var(--dsw-alias-label-secondary);margin-top:16px}
 .wso-list{display:flex;flex-direction:column;gap:10px;margin-top:14px}
@@ -227,6 +296,8 @@ window.__ModuleLoader__.load({
 .wso-session-title span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .wso-tag{font-size:11px;font-weight:400;color:var(--dsw-alias-label-secondary);border:1px solid var(--dsw-alias-border-l2);border-radius:999px;padding:0 6px;line-height:16px;flex:none}
 .wso-select{height:34px;box-sizing:border-box;width:100%;padding:0 8px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font:inherit;font-size:13px}
+.wso-search{margin-top:10px}
+.wso-search-input{height:34px;box-sizing:border-box;width:100%;padding:0 10px;border:1px solid var(--dsw-alias-border-l2);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font:inherit;font-size:13px}
 .wso-batch{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:10px;padding:8px 12px;border:1px dashed var(--dsw-alias-border-l2);border-radius:10px;flex-wrap:wrap}
 .wso-batch-info{font-size:12px;color:var(--dsw-alias-label-secondary)}
 .wso-check{width:16px;height:16px;flex:none;accent-color:var(--dsw-alias-brand-primary);cursor:pointer}
@@ -556,25 +627,45 @@ window.__ModuleLoader__.load({
           : null)))
     }
 
-    function SessionMoveDialog ({ t, session, workspaces, liveSessionId, runCommand, onClose }) {
+    function SessionMoveDialog ({ t, session, workspaces, liveSessionId, runCommand, pickDirectory, onClose }) {
       const options = React.useMemo(
         () => workspaces.filter((workspace) => workspace.workspaceId !== session.workspaceId),
         [workspaces, session.workspaceId],
       )
       const [targetId, setTargetId] = React.useState(options.length > 0 ? options[0].workspaceId : '')
       const [busy, setBusy] = React.useState(false)
+      const [planBusy, setPlanBusy] = React.useState(false)
       const [error, setError] = React.useState(null)
       const [result, setResult] = React.useState(null)
+      const [legacyFolder, setLegacyFolder] = React.useState('')
+      const [projectFolder, setProjectFolder] = React.useState('')
+      const [plan, setPlan] = React.useState(null)
+      const [planToken, setPlanToken] = React.useState(null)
+      const [decisions, setDecisions] = React.useState({})
+
+      function resetPlan () {
+        setPlan(null)
+        setPlanToken(null)
+        setDecisions({})
+        setResult(null)
+      }
 
       React.useEffect(() => {
         const onKey = (event) => {
-          if (event.key === 'Escape' && !busy) onClose()
+          if (event.key === 'Escape' && !busy && !planBusy) onClose()
         }
         window.addEventListener('keydown', onKey)
         return () => window.removeEventListener('keydown', onKey)
-      }, [busy, onClose])
+      }, [busy, planBusy, onClose])
 
-      async function submit () {
+      function setDecision (id, patch) {
+        setDecisions((previous) => ({
+          ...previous,
+          [id]: { ...(previous[id] ?? { action: 'cancel' }), ...patch },
+        }))
+      }
+
+      async function preview () {
         if (liveSessionId === undefined) {
           setError(t('error.noSession'))
           return
@@ -583,14 +674,64 @@ window.__ModuleLoader__.load({
           setError(t('sessionMove.noTarget'))
           return
         }
+        setPlanBusy(true)
+        setError(null)
+        setResult(null)
+        try {
+          const line = '/session-relocate-plan ' + JSON.stringify({
+            sessionId: session.id,
+            targetWorkspaceId: targetId,
+            sessionTitle: session.title,
+            legacyFolder: legacyFolder.trim() === '' ? undefined : legacyFolder.trim(),
+            projectFolder: projectFolder.trim() === '' ? undefined : projectFolder.trim(),
+          })
+          const text = await runCommand(liveSessionId, line)
+          const parsed = JSON.parse(text)
+          if (parsed.ok !== true) throw new Error(parsed.error ?? t('sessionMove.planFailed'))
+          const initial = {}
+          for (const item of parsed.unknown ?? []) initial[item.id] = { action: 'cancel' }
+          setPlan(parsed)
+          setPlanToken(parsed.token)
+          setDecisions(initial)
+        } catch (failure) {
+          setError(failure instanceof Error ? failure.message : String(failure))
+        } finally {
+          setPlanBusy(false)
+        }
+      }
+
+      async function pickCustom (id) {
+        if (typeof pickDirectory !== 'function') return
+        try {
+          const picked = await pickDirectory()
+          if (typeof picked === 'string' && picked !== '') {
+            setDecision(id, { action: 'move', destination: 'custom', customPath: picked })
+          }
+        } catch (failure) {
+          setError(failure instanceof Error ? failure.message : String(failure))
+        }
+      }
+
+      async function executePlan () {
+        if (liveSessionId === undefined) {
+          setError(t('error.noSession'))
+          return
+        }
+        if (targetId === '' || planToken === null) {
+          setError(t('sessionMove.planFailed'))
+          return
+        }
         setBusy(true)
         setError(null)
         setResult(null)
         try {
+          const decisionList = Object.entries(decisions).map(([id, decision]) => ({ id, ...decision }))
           const line = '/session-relocate ' + JSON.stringify({
             sessionId: session.id,
             targetWorkspaceId: targetId,
             sessionTitle: session.title,
+            planToken,
+            decisions: decisionList,
           })
           const text = await runCommand(liveSessionId, line)
           setResult(text || t('sessionMove.done'))
@@ -601,10 +742,13 @@ window.__ModuleLoader__.load({
         }
       }
 
+      const primary = plan === null ? preview : executePlan
+      const primaryLabel = plan === null ? t('sessionMove.preview') : t('sessionMove.start')
+
       return h('div', {
         className: 'wso-backdrop',
         onMouseDown: (event) => {
-          if (event.target === event.currentTarget && !busy) onClose()
+          if (event.target === event.currentTarget && !busy && !planBusy) onClose()
         },
       }, h('div', {
         className: 'wso-dialog',
@@ -622,13 +766,90 @@ window.__ModuleLoader__.load({
           id: 'wso-session-target',
           className: 'wso-select',
           value: targetId,
-          disabled: busy || options.length === 0,
-          onChange: (event) => setTargetId(event.target.value),
+          disabled: busy || planBusy || options.length === 0,
+          onChange: (event) => {
+            setTargetId(event.target.value)
+            resetPlan()
+          },
         }, options.map((workspace) => h('option', {
           value: workspace.workspaceId,
           key: workspace.workspaceId,
         }, workspace.title || workspace.path)))),
       options.length === 0 ? h('p', { className: 'wso-note' }, t('sessionMove.noTarget')) : null,
+      h('div', { className: 'wso-field' },
+        h('label', { htmlFor: 'wso-session-legacy' }, t('sessionMove.legacy')),
+        h('input', {
+          id: 'wso-session-legacy',
+          type: 'text',
+          value: legacyFolder,
+          disabled: busy || planBusy,
+          placeholder: t('sessionMove.legacyHint'),
+          onChange: (event) => {
+            setLegacyFolder(event.target.value)
+            resetPlan()
+          },
+        })),
+      h('div', { className: 'wso-field' },
+        h('label', { htmlFor: 'wso-session-project' }, t('sessionMove.project')),
+        h('input', {
+          id: 'wso-session-project',
+          type: 'text',
+          value: projectFolder,
+          disabled: busy || planBusy,
+          placeholder: t('sessionMove.projectHint'),
+          onChange: (event) => {
+            setProjectFolder(event.target.value)
+            resetPlan()
+          },
+        })),
+      h('p', { className: 'wso-note' }, t('sessionMove.planHint')),
+      plan !== null
+        ? h('div', { className: 'wso-plan' },
+          h('p', { className: 'wso-note' }, `${t('sessionMove.planTarget')}：${plan.targetSessionFolder ?? ''}`),
+          h('p', { className: 'wso-note' }, t('sessionMove.unknownNote')),
+          (plan.unknown ?? []).length === 0
+            ? h('p', { className: 'wso-note' }, t('sessionMove.unknownNone'))
+            : (plan.unknown ?? []).map((item) => {
+                const decision = decisions[item.id] ?? { action: 'cancel' }
+                const destination = decision.action === 'move' ? (decision.destination ?? 'session') : 'cancel'
+                return h('div', { className: 'wso-plan-item', key: item.id },
+                  h('div', { className: 'wso-path-box' }, `${item.kind === 'folder' ? t('sessionMove.folder') : t('sessionMove.file')}：${item.label}`),
+                  h('div', { className: 'wso-note' }, `${t('sessionMove.reason')}：${t(`sessionMove.reason.${item.reason}`)}（${item.files} ${t('sessionMove.files')}，${item.bytes} ${t('sessionMove.bytes')}）`),
+                  h('div', { className: 'wso-plan-row' },
+                    h('select', {
+                      className: 'wso-select',
+                      value: destination,
+                      disabled: busy,
+                      onChange: (event) => {
+                        const value = event.target.value
+                        if (value === 'cancel') setDecision(item.id, { action: 'cancel' })
+                        else setDecision(item.id, { action: 'move', destination: value, customPath: value === 'custom' ? (decision.customPath ?? '') : undefined })
+                      },
+                    },
+                    h('option', { value: 'cancel' }, t('sessionMove.dest.cancel')),
+                    h('option', { value: 'session' }, t('sessionMove.dest.session')),
+                    h('option', { value: 'workspace' }, t('sessionMove.dest.workspace')),
+                    h('option', { value: 'custom' }, t('sessionMove.dest.custom'))),
+                    destination === 'custom'
+                      ? h('div', { className: 'wso-plan-custom' },
+                        h('input', {
+                          type: 'text',
+                          value: decision.customPath ?? '',
+                          disabled: busy,
+                          placeholder: t('sessionMove.customHint'),
+                          onChange: (event) => setDecision(item.id, { action: 'move', destination: 'custom', customPath: event.target.value }),
+                        }),
+                        typeof pickDirectory === 'function'
+                          ? h('button', {
+                            type: 'button',
+                            className: 'wso-btn',
+                            disabled: busy,
+                            onClick: () => pickCustom(item.id),
+                          }, t('sessionMove.pick'))
+                          : null)
+                      : null))
+              }))
+        : null,
       h('p', { className: 'wso-note' }, t('sessionMove.note')),
       liveSessionId === undefined ? h('p', { className: 'wso-warn', role: 'status' }, t('noSession')) : null,
       error !== null ? h('p', { className: 'wso-error', role: 'alert' }, error) : null,
@@ -637,16 +858,16 @@ window.__ModuleLoader__.load({
         h('button', {
           type: 'button',
           className: 'wso-btn',
-          disabled: busy,
+          disabled: busy || planBusy,
           onClick: onClose,
         }, result !== null ? t('close') : t('cancel')),
         result === null
           ? h('button', {
             type: 'button',
             className: 'wso-btn wso-primary',
-            disabled: busy || liveSessionId === undefined || options.length === 0,
-            onClick: submit,
-          }, busy ? t('sessionMove.busy') : t('sessionMove.confirm'))
+            disabled: busy || planBusy || liveSessionId === undefined || options.length === 0,
+            onClick: primary,
+          }, planBusy ? t('sessionMove.planBusy') : (busy ? t('sessionMove.busy') : primaryLabel))
           : null)))
     }
 
@@ -928,6 +1149,7 @@ window.__ModuleLoader__.load({
       const [selected, setSelected] = React.useState(() => new Set())
       const [batchMoving, setBatchMoving] = React.useState(false)
       const [deleting, setDeleting] = React.useState(null)
+      const [sessionQuery, setSessionQuery] = React.useState('')
       const sessionRows = React.useMemo(() => {
         const rows = []
         for (const workspace of items) {
@@ -948,6 +1170,12 @@ window.__ModuleLoader__.load({
         }
         return rows
       }, [items, sessionsById])
+      const filteredSessionRows = React.useMemo(() => {
+        const query = sessionQuery.trim().toLowerCase()
+        if (query === '') return sessionRows
+        return sessionRows.filter((row) => `${row.title} ${row.workspaceTitle}`.toLowerCase().includes(query))
+      }, [sessionRows, sessionQuery])
+      const visibleSessionRows = React.useMemo(() => filteredSessionRows.slice(0, 300), [filteredSessionRows])
       const selectedRows = React.useMemo(
         () => sessionRows.filter((row) => selected.has(row.id) && !row.current),
         [sessionRows, selected],
@@ -961,8 +1189,8 @@ window.__ModuleLoader__.load({
         })
       }, [])
       const selectAllSessions = React.useCallback(() => {
-        setSelected(new Set(sessionRows.filter((row) => !row.current).map((row) => row.id)))
-      }, [sessionRows])
+        setSelected(new Set(filteredSessionRows.filter((row) => !row.current).map((row) => row.id)))
+      }, [filteredSessionRows])
       const clearSelected = React.useCallback(() => setSelected(new Set()), [])
 
       const runCommand = React.useCallback(async (sessionId, line) => {
@@ -1012,13 +1240,21 @@ window.__ModuleLoader__.load({
 
         h('h3', { className: 'wso-h3' }, t('sessions.title')),
         h('p', { className: 'wso-note' }, t('sessions.note')),
+        sessionRows.length > 0 ? h('div', { className: 'wso-search' },
+          h('input', {
+            type: 'search',
+            className: 'wso-search-input',
+            value: sessionQuery,
+            placeholder: t('sessions.search'),
+            onChange: (event) => setSessionQuery(event.target.value),
+          })) : null,
         sessionRows.length > 0 ? h('div', { className: 'wso-batch' },
           h('div', { className: 'wso-batch-info' }, t('sessions.selected', { n: selectedRows.length })),
           h('div', { className: 'wso-row-actions' },
             h('button', {
               type: 'button',
               className: 'wso-btn',
-              disabled: sessionRows.every((row) => row.current),
+              disabled: filteredSessionRows.every((row) => row.current),
               onClick: selectAllSessions,
             }, t('sessions.selectAll')),
             h('button', {
@@ -1041,36 +1277,41 @@ window.__ModuleLoader__.load({
             }, t('sessions.batchDelete')))) : null,
         sessionRows.length === 0
           ? h('p', { className: 'wso-empty' }, t('sessions.empty'))
-          : h('div', { className: 'wso-sessions' }, sessionRows.map((row) => h('div', {
-            className: 'wso-session',
-            key: row.id,
-          },
-          h('input', {
-            type: 'checkbox',
-            className: 'wso-check',
-            checked: selected.has(row.id),
-            disabled: row.current,
-            onChange: () => toggleSelected(row.id),
-            'aria-label': t('sessions.batchMove'),
-          }),
-          h('div', { className: 'wso-session-main' },
-            h('div', { className: 'wso-session-title' },
-              h('span', null, row.title),
-              row.current ? h('span', { className: 'wso-tag' }, t('sessions.current')) : null),
-            h('div', { className: 'wso-meta' }, `${t('sessions.workspace')}: ${row.workspaceTitle}`)),
-          h('div', { className: 'wso-row-actions' },
-            h('button', {
-              type: 'button',
-              className: 'wso-btn',
-              disabled: row.current || liveSessionId === undefined,
-              onClick: () => setSessionMoving(row),
-            }, t('sessions.move')),
-            h('button', {
-              type: 'button',
-              className: 'wso-btn wso-danger',
-              disabled: row.current || liveSessionId === undefined,
-              onClick: () => setDeleting([row]),
-            }, t('sessions.delete')))))),
+          : (filteredSessionRows.length === 0
+              ? h('p', { className: 'wso-empty' }, t('sessions.noMatch'))
+              : h('div', { className: 'wso-sessions' }, visibleSessionRows.map((row) => h('div', {
+                className: 'wso-session',
+                key: row.id,
+              },
+              h('input', {
+                type: 'checkbox',
+                className: 'wso-check',
+                checked: selected.has(row.id),
+                disabled: row.current,
+                onChange: () => toggleSelected(row.id),
+                'aria-label': t('sessions.batchMove'),
+              }),
+              h('div', { className: 'wso-session-main' },
+                h('div', { className: 'wso-session-title' },
+                  h('span', null, row.title),
+                  row.current ? h('span', { className: 'wso-tag' }, t('sessions.current')) : null),
+                h('div', { className: 'wso-meta' }, `${t('sessions.workspace')}: ${row.workspaceTitle}`)),
+              h('div', { className: 'wso-row-actions' },
+                h('button', {
+                  type: 'button',
+                  className: 'wso-btn',
+                  disabled: row.current || liveSessionId === undefined,
+                  onClick: () => setSessionMoving(row),
+                }, t('sessions.move')),
+                h('button', {
+                  type: 'button',
+                  className: 'wso-btn wso-danger',
+                  disabled: row.current || liveSessionId === undefined,
+                  onClick: () => setDeleting([row]),
+                }, t('sessions.delete'))))))),
+        filteredSessionRows.length > visibleSessionRows.length
+          ? h('p', { className: 'wso-note' }, t('sessions.more', { n: visibleSessionRows.length }))
+          : null,
         moving !== null ? h(MoveDialog, {
           t,
           workspace: moving,
@@ -1093,6 +1334,7 @@ window.__ModuleLoader__.load({
           workspaces: items,
           liveSessionId,
           runCommand,
+          pickDirectory,
           onClose: () => setSessionMoving(null),
         }) : null,
         batchMoving ? h(BatchSessionMoveDialog, {

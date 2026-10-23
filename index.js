@@ -15,6 +15,8 @@ import {
   isInside,
   isSameOrInside,
   listLooseRootFiles,
+  listTree,
+  mergeTreeVerified,
   pathExists,
   readSessionMarker,
   relocateDirectory,
@@ -237,6 +239,7 @@ export function apply (ctx, rawConfig = {}) {
   const sectionDisposers = new Map()
   const renameChains = new Map()
   const confirmations = new Map()
+  const relocationPlans = new Map()
   let operationTail = Promise.resolve()
 
   /**
@@ -615,6 +618,17 @@ export function apply (ctx, rawConfig = {}) {
       return
     }
     if (workspace === undefined) return
+    try {
+      const current = ctx.workingDirectory.get(agent.session)
+      if (typeof current !== 'string' || current === '' || !isSameOrInside(workspace.path, current)) {
+        // A moved session may still point at the old working directory. Set
+        // it back to the target workspace so resumed tools do not fail on a
+        // deleted/foreign path.
+        await ctx.workingDirectory.set(agent, workspace.path)
+      }
+    } catch (error) {
+      ctx.logger.warn('workspace-organizer: 无法校正会话工作目录', error)
+    }
     const sessionsDir = join(workspace.path, config.sessionsDirName)
     try {
       await mkdir(sessionsDir, { recursive: true })
@@ -1160,6 +1174,11 @@ export function apply (ctx, rawConfig = {}) {
     const sessionTitle = typeof input.sessionTitle === 'string' && input.sessionTitle.trim() !== ''
       ? input.sessionTitle.trim()
       : sessionId
+    const legacyFolder = typeof input.legacyFolder === 'string' ? input.legacyFolder.trim() : ''
+    const projectFolder = typeof input.projectFolder === 'string' ? input.projectFolder.trim() : ''
+    const skipPaths = Array.isArray(input.skipPaths)
+      ? input.skipPaths.filter((entry) => typeof entry === 'string' && entry !== '')
+      : []
     if (sessionId === '') throw new Error('缺少 sessionId')
     if (targetWorkspaceId === '') throw new Error('缺少 targetWorkspaceId')
     if (sessionId === carrierSessionId) {
@@ -1248,34 +1267,42 @@ export function apply (ctx, rawConfig = {}) {
       if (folder === undefined) {
         folderNote = '该会话没有带 .dsh-session 标记的 sessions/ 专属目录；为避免误移，不处理未标记目录'
       } else {
-        await mkdir(targetSessionsDir, { recursive: true })
-        const leaf = await uniqueChildName(targetSessionsDir, basename(folder))
-        const targetFolder = join(targetSessionsDir, leaf)
-        let relocation
-        try {
-          // Prefer a real move: same-volume rename keeps every nested file,
-          // and cross-volume relocation copies with verification before the
-          // source is detached.
-          relocation = await relocateDirectory(folder, targetFolder)
-        } catch (error) {
-          // A process may still hold the folder. Keep the files available in
-          // the target workspace instead of leaving the session without them.
-          await copyDirectoryKeepingSource(folder, targetFolder)
+        const existingTarget = await findSessionFolder(targetSessionsDir, sessionId)
+        if (existingTarget !== undefined) {
+          const actions = await mergeTreeVerified(folder, existingTarget, basename(folder), { skip: ['.dsh-session'] })
           folderFrom = folder
-          folderTo = targetFolder
-          folderNote = `会话文件夹及其中文件已复制到新工作区；旧目录暂时无法删除：${folder}（${error instanceof Error ? error.message : String(error)}）`
-        }
-        if (relocation !== undefined) {
-          folderFrom = folder
-          folderTo = targetFolder
-          if (relocation.backup !== undefined) {
-            try {
-              await rm(relocation.backup, { recursive: true, force: true, maxRetries: 2, retryDelay: 150 })
-            } catch {
-              folderNote = `会话文件夹及其中文件已移动；旧备份未能删除：${relocation.backup}`
-            }
+          folderTo = existingTarget
+          folderNote = `会话文件夹已合并到目标已有目录（${actions.length} 项）`
+        } else {
+          await mkdir(targetSessionsDir, { recursive: true })
+          const leaf = await uniqueChildName(targetSessionsDir, basename(folder))
+          const targetFolder = join(targetSessionsDir, leaf)
+          let relocation
+          try {
+            // Prefer a real move: same-volume rename keeps every nested file,
+            // and cross-volume relocation copies with verification before the
+            // source is detached.
+            relocation = await relocateDirectory(folder, targetFolder)
+          } catch (error) {
+            // A process may still hold the folder. Keep the files available in
+            // the target workspace instead of leaving the session without them.
+            await copyDirectoryKeepingSource(folder, targetFolder)
+            folderFrom = folder
+            folderTo = targetFolder
+            folderNote = `会话文件夹及其中文件已复制到新工作区；旧目录暂时无法删除：${folder}（${error instanceof Error ? error.message : String(error)}）`
           }
-          if (folderNote === undefined) folderNote = '会话文件夹及其中文件已移动'
+          if (relocation !== undefined) {
+            folderFrom = folder
+            folderTo = targetFolder
+            if (relocation.backup !== undefined) {
+              try {
+                await rm(relocation.backup, { recursive: true, force: true, maxRetries: 2, retryDelay: 150 })
+              } catch {
+                folderNote = `会话文件夹及其中文件已移动；旧备份未能删除：${relocation.backup}`
+              }
+            }
+            if (folderNote === undefined) folderNote = '会话文件夹及其中文件已移动'
+          }
         }
         const marker = (await readSessionMarker(folderTo)) ?? {}
         marker.sessionId = sessionId
@@ -1287,17 +1314,82 @@ export function apply (ctx, rawConfig = {}) {
       folderNote = `会话文件夹及其中文件移动失败（会话归属仍会变更）：${error instanceof Error ? error.message : String(error)}`
     }
 
+    let legacyNote
+    if (legacyFolder !== '') {
+      const leafError = validateLeafName(legacyFolder)
+      if (leafError !== undefined) throw new Error(leafError)
+      const source = join(sourceSessionsDir, legacyFolder)
+      if (!isInside(sourceSessionsDir, source)) throw new Error(`旧会话文件夹不在源工作区 sessions/ 内：${source}`)
+      if (!(await isDirectory(source))) throw new Error(`旧会话文件夹不存在：${source}`)
+      const marker = await readSessionMarker(source)
+      if (marker !== undefined) {
+        throw new Error(`该目录已带 .dsh-session 标记（${marker.sessionId}），不应作为旧会话目录合并。`)
+      }
+      let legacyTarget = folderTo
+      if (legacyTarget === undefined) legacyTarget = await findSessionFolder(targetSessionsDir, sessionId)
+      if (legacyTarget !== undefined) {
+        const actions = await mergeTreeVerified(source, legacyTarget, legacyFolder)
+        legacyNote = `已合并到 ${legacyTarget}（${actions.length} 项）`
+      } else {
+        await mkdir(targetSessionsDir, { recursive: true })
+        const leaf = await uniqueChildName(targetSessionsDir, legacyFolder)
+        const destination = join(targetSessionsDir, leaf)
+        const relocation = await relocateDirectory(source, destination)
+        if (relocation.backup !== undefined) {
+          try { await rm(relocation.backup, { recursive: true, force: true }) } catch {}
+        }
+        await writeSessionMarker(destination, {
+          sessionId,
+          workspacePath: targetWorkspace.path,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })
+        folderFrom = source
+        folderTo = destination
+        folderNote = '旧会话文件夹已作为会话目录迁移'
+        legacyNote = `已迁移到 ${destination}`
+      }
+    }
+
+    let projectNote
+    if (projectFolder !== '') {
+      const leafError = validateLeafName(projectFolder)
+      if (leafError !== undefined) throw new Error(leafError)
+      const source = join(sourceWorkspace.path, projectFolder)
+      if (samePath(source, sourceWorkspace.path) || isSameOrInside(sourceSessionsDir, source)) {
+        throw new Error(`项目目录不能是工作区根目录或 sessions/ 内部路径：${source}`)
+      }
+      if (!isInside(sourceWorkspace.path, source)) throw new Error(`项目目录不在源工作区内：${source}`)
+      if (!(await isDirectory(source))) throw new Error(`项目目录不存在：${source}`)
+      const destination = join(targetWorkspace.path, projectFolder)
+      if (await pathExists(destination)) throw new Error(`目标工作区已存在同名项目目录：${destination}`)
+      const relocation = await relocateDirectory(source, destination)
+      if (relocation.backup !== undefined) {
+        try { await rm(relocation.backup, { recursive: true, force: true }) } catch {}
+      }
+      projectNote = `已移动到 ${destination}`
+    }
+
     const writtenMoved = []
     const writtenConflicts = []
     const writtenFailed = []
     const writtenKept = []
     let writtenSkipped = 0
+    let writtenRelative = 0
     for (const raw of writtenPaths) {
       let sourceFile
+      if (!isAbsolutePath(raw)) {
+        writtenRelative += 1
+        continue
+      }
       try {
-        sourceFile = isAbsolutePath(raw) ? resolve(raw) : resolve(sourceWorkspace.path, raw)
+        sourceFile = resolve(raw)
       } catch {
         writtenFailed.push(`${raw}: 路径无效`)
+        continue
+      }
+      if (skipPaths.some((path) => isInside(path, sourceFile))) {
+        writtenSkipped += 1
         continue
       }
       if (!isInside(sourceWorkspace.path, sourceFile)) {
@@ -1394,10 +1486,12 @@ export function apply (ctx, rawConfig = {}) {
         ? `会话在 sessions/ 之外写到工作区的文件：读取记录失败（${writtenPathsError instanceof Error ? writtenPathsError.message : String(writtenPathsError)}）`
         : (writtenPaths.length === 0
             ? '会话在 sessions/ 之外写到工作区的文件：没有 write/edit 记录'
-            : `会话在 sessions/ 之外写到工作区的文件：记录 ${writtenPaths.length} 个，移动 ${writtenMoved.length} 个${writtenConflicts.length > 0 ? `，同名未覆盖 ${writtenConflicts.length} 个` : ''}${writtenFailed.length > 0 ? `，失败 ${writtenFailed.length} 个` : ''}${writtenSkipped > 0 ? `，跳过 ${writtenSkipped} 个（源工作区外、sessions/ 内或已不存在）` : ''}`),
+            : `会话在 sessions/ 之外写到工作区的文件：记录 ${writtenPaths.length} 个，移动 ${writtenMoved.length} 个${writtenConflicts.length > 0 ? `，同名未覆盖 ${writtenConflicts.length} 个` : ''}${writtenFailed.length > 0 ? `，失败 ${writtenFailed.length} 个` : ''}${writtenSkipped > 0 ? `，跳过 ${writtenSkipped} 个（源工作区外、sessions/ 内或已不存在）` : ''}${writtenRelative > 0 ? `，相对路径 ${writtenRelative} 个未处理（无法确定写入时 cwd）` : ''}`),
       attached ? '会话归属：已立即挂到目标工作区。' : '会话归属：目标工作区暂未接收，已写入待归属记录，重启 DSH 后自动归位。',
       '请重启 DSH 刷新会话列表和服务缓存。',
     ]
+    if (legacyNote !== undefined) lines.push(`旧会话文件夹：${legacyNote}`)
+    if (projectNote !== undefined) lines.push(`项目目录：${projectNote}`)
     if (writtenConflicts.length > 0) {
       lines.push(`目标已存在同名文件，未覆盖：${writtenConflicts.slice(0, 10).join('、')}${writtenConflicts.length > 10 ? ` 等 ${writtenConflicts.length} 个` : ''}`)
     }
@@ -1416,7 +1510,7 @@ export function apply (ctx, rawConfig = {}) {
     if (!detached) lines.push('旧工作区记录里的会话计数可能暂时未清理，重启 DSH 后会自动重新计算。')
     if (attachError !== undefined) lines.push(`目标工作区暂时未挂上的原因：${attachError instanceof Error ? attachError.message : String(attachError)}`)
     if (detachError !== undefined) lines.push(`旧工作区移除会话失败的原因：${detachError instanceof Error ? detachError.message : String(detachError)}`)
-    lines.push('如果该会话曾手动改过工作目录（working/directory 事件），重启后请在会话里重新设置一次。')
+    lines.push('会话恢复时，如果工作目录仍指向旧路径或工作区外，插件会自动校正到新工作区根目录。')
     if (details !== null && typeof details === 'object') {
       details.writtenMoved = writtenMoved.length
       details.writtenConflicts = writtenConflicts.length
@@ -1424,6 +1518,305 @@ export function apply (ctx, rawConfig = {}) {
       details.writtenSkipped = writtenSkipped
       details.folderMoved = folderTo !== undefined
     }
+    return lines.join('\n')
+  }
+
+  /**
+   * Build a read-only relocation plan. Files/folders whose destination cannot
+   * be inferred are returned for the settings page to ask the user.
+   * @param input command payload.
+   * @param carrierSessionId session running this command.
+   * @returns JSON plan with a one-time token.
+   */
+  async function runSessionRelocatePlan (input, carrierSessionId) {
+    const sessionId = typeof input.sessionId === 'string' ? input.sessionId : ''
+    const targetWorkspaceId = typeof input.targetWorkspaceId === 'string' ? input.targetWorkspaceId : ''
+    const sessionTitle = typeof input.sessionTitle === 'string' && input.sessionTitle.trim() !== ''
+      ? input.sessionTitle.trim()
+      : sessionId
+    const legacyFolder = typeof input.legacyFolder === 'string' ? input.legacyFolder.trim() : ''
+    const projectFolder = typeof input.projectFolder === 'string' ? input.projectFolder.trim() : ''
+    if (sessionId === '') throw new Error('缺少 sessionId')
+    if (targetWorkspaceId === '') throw new Error('缺少 targetWorkspaceId')
+    if (sessionId === carrierSessionId) throw new Error('承载这次操作的会话不能移动自己。')
+    const live = ctx.agents.get(sessionId)
+    if (live !== undefined) throw new Error(`目标会话正在运行（${sessionLabel(live)}），请先切换离开或关闭它。`)
+    const snapshot = await ctx.sessionPersistence.stat(sessionId)
+    const header = snapshot?.header
+    if (header === undefined) throw new Error('找不到该会话的持久化 header。')
+    if (header.origin === 'subagent' || (header.delegationDepth ?? 0) > 0) {
+      throw new Error('子会话不能单独移动；请移动它的父会话。')
+    }
+    const sourcePath = header.cwd
+    if (typeof sourcePath !== 'string' || sourcePath === '') throw new Error('该会话没有记录 cwd。')
+    let sourceWorkspace
+    try { sourceWorkspace = await ctx.workspaceRegistry.resolveByPath(sourcePath) } catch { sourceWorkspace = undefined }
+    if (sourceWorkspace === undefined) throw new Error(`会话当前 cwd 不属于任何已注册工作区：${sourcePath}`)
+    const targetWorkspace = ctx.workspaceRegistry.get(targetWorkspaceId)
+    if (targetWorkspace === undefined) throw new Error('目标工作区不存在，可能已被删除')
+    if (sourceWorkspace.id === targetWorkspace.id) throw new Error('目标工作区与当前工作区相同')
+    await assertSafePath(sourceWorkspace.path, '会话源工作区')
+    await assertSafePath(targetWorkspace.path, '目标工作区')
+
+    let sourceProjectDir = join(config.sessionsRoot, sessionProjectKey(sourcePath))
+    let records = await scanProjectSessions(sourceProjectDir, sourcePath)
+    let record = records.find((entry) => entry.id === sessionId)
+    if (record === undefined && !samePath(sourceWorkspace.path, sourcePath)) {
+      const alternateDir = join(config.sessionsRoot, sessionProjectKey(sourceWorkspace.path))
+      const alternate = await scanProjectSessions(alternateDir, sourcePath)
+      const alternateRecord = alternate.find((entry) => entry.id === sessionId)
+      if (alternateRecord !== undefined) {
+        sourceProjectDir = alternateDir
+        record = alternateRecord
+      }
+    }
+    if (record === undefined) throw new Error(`未找到该会话的日志目录：${sessionId}`)
+
+    const sourceSessionsDir = join(sourceWorkspace.path, config.sessionsDirName)
+    const targetSessionsDir = join(targetWorkspace.path, config.sessionsDirName)
+    const sourceFolder = await findSessionFolder(sourceSessionsDir, sessionId)
+    const existingTarget = await findSessionFolder(targetSessionsDir, sessionId)
+    await mkdir(targetSessionsDir, { recursive: true })
+    let targetSessionFolder = existingTarget
+    if (targetSessionFolder === undefined) {
+      const base = sourceFolder !== undefined
+        ? basename(sourceFolder)
+        : `${formatDatePrefix(header.createdAt)}_${sanitizeFolderName(sessionTitle, config.maxTitleChars)}`
+      // Do not create the folder during planning; only reserve a unique name.
+      targetSessionFolder = join(targetSessionsDir, await uniqueChildName(targetSessionsDir, base))
+    }
+
+    const unknown = []
+    const seen = new Set()
+    const unknownFolders = []
+    const folderEntries = await readdir(sourceSessionsDir, { withFileTypes: true }).catch(() => [])
+    for (const entry of folderEntries) {
+      if (!entry.isDirectory()) continue
+      const source = join(sourceSessionsDir, entry.name)
+      if (sourceFolder !== undefined && samePath(source, sourceFolder)) continue
+      if ((await readSessionMarker(source)) !== undefined) continue
+      const tree = await listTree(source)
+      const files = tree.filter((node) => node.type === 'file')
+      const bytes = files.reduce((sum, node) => sum + node.size, 0)
+      unknownFolders.push(join(source, ''))
+      unknown.push({
+        id: `folder:${entry.name}`,
+        kind: 'folder',
+        label: entry.name,
+        sourcePath: source,
+        reason: 'unmarked-folder',
+        files: files.length,
+        bytes,
+        defaultDestination: 'session',
+        defaultMode: 'merge',
+      })
+    }
+    if (projectFolder !== '') {
+      const leafError = validateLeafName(projectFolder)
+      if (leafError !== undefined) throw new Error(leafError)
+      const source = join(sourceWorkspace.path, projectFolder)
+      if (samePath(source, sourceWorkspace.path) || isSameOrInside(sourceSessionsDir, source)) {
+        throw new Error(`项目目录不能是工作区根目录或 sessions/ 内部路径：${source}`)
+      }
+      if (!isInside(sourceWorkspace.path, source)) throw new Error(`项目目录不在源工作区内：${source}`)
+      if (!(await isDirectory(source))) throw new Error(`项目目录不存在：${source}`)
+      const tree = await listTree(source)
+      const files = tree.filter((node) => node.type === 'file')
+      unknownFolders.push(join(source, ''))
+      unknown.push({
+        id: `project:${projectFolder}`,
+        kind: 'folder',
+        label: projectFolder,
+        sourcePath: source,
+        reason: 'project-folder',
+        files: files.length,
+        bytes: files.reduce((sum, node) => sum + node.size, 0),
+        defaultDestination: 'workspace',
+        defaultMode: 'subfolder',
+      })
+    }
+
+    let writtenPaths = []
+    let writtenError
+    let knownFiles = 0
+    try {
+      writtenPaths = await collectSessionWrittenPaths(record.dir)
+    } catch (error) {
+      writtenError = error
+    }
+    for (const raw of writtenPaths) {
+      let sourceFile
+      let reason
+      if (!isAbsolutePath(raw)) {
+        sourceFile = resolve(sourceWorkspace.path, raw)
+        reason = 'relative-path'
+      } else {
+        sourceFile = resolve(raw)
+        reason = isInside(sourceWorkspace.path, sourceFile) ? 'target-conflict' : 'outside-workspace'
+      }
+      if (!(await pathExists(sourceFile))) continue
+      let info
+      try { info = await stat(sourceFile) } catch { continue }
+      if (!info.isFile()) continue
+      if (unknownFolders.some((folder) => isInside(folder, sourceFile))) continue
+      if (isInside(sourceSessionsDir, sourceFile)) continue
+      if (reason === 'target-conflict') {
+        const rel = relative(sourceWorkspace.path, sourceFile)
+        const targetFile = join(targetWorkspace.path, rel)
+        if (!(await pathExists(targetFile))) {
+          knownFiles += 1
+          continue
+        }
+      }
+      const id = `file:${sourceFile}`
+      if (seen.has(id)) continue
+      seen.add(id)
+      unknown.push({
+        id,
+        kind: 'file',
+        label: reason === 'relative-path' ? raw : basename(sourceFile),
+        sourcePath: sourceFile,
+        reason,
+        files: 1,
+        bytes: info.size,
+        defaultDestination: reason === 'outside-workspace' ? 'workspace' : 'session',
+        defaultMode: 'file',
+      })
+    }
+
+    const token = issueConfirmation('session-relocate-plan', { sessionId, targetWorkspaceId })
+    relocationPlans.set(token, {
+      sessionId,
+      targetWorkspaceId,
+      sessionTitle,
+      sourceWorkspaceId: sourceWorkspace.id,
+      sourceWorkspacePath: sourceWorkspace.path,
+      targetWorkspacePath: targetWorkspace.path,
+      sourceSessionsDir,
+      targetSessionsDir,
+      targetSessionFolder,
+      unknown,
+      createdAt: Date.now(),
+    })
+    const timer = setTimeout(() => relocationPlans.delete(token), 5 * 60 * 1000)
+    timer.unref?.()
+    return JSON.stringify({
+      ok: true,
+      token,
+      targetSessionFolder,
+      known: { files: knownFiles, outsideFiles: knownFiles, writtenError: writtenError instanceof Error ? writtenError.message : undefined },
+      unknown,
+    })
+  }
+
+  /**
+   * Apply a user-approved relocation plan. The session move itself is performed
+   * first, then only the chosen unknown items are moved.
+   * @param input command payload with planToken/decisions.
+   * @param carrierSessionId session running this command.
+   * @returns result text.
+   */
+  async function runSessionRelocateDecisions (input, carrierSessionId) {
+    const token = typeof input.planToken === 'string' ? input.planToken : ''
+    const plan = relocationPlans.get(token)
+    if (plan === undefined) throw new Error('迁移计划已失效，请重新预览。')
+    relocationPlans.delete(token)
+    requireConfirmation('session-relocate-plan', token, {
+      sessionId: plan.sessionId,
+      targetWorkspaceId: plan.targetWorkspaceId,
+    })
+    const baseText = await runSessionRelocate({
+      sessionId: plan.sessionId,
+      targetWorkspaceId: plan.targetWorkspaceId,
+      sessionTitle: plan.sessionTitle,
+      skipPaths: plan.unknown.filter((item) => item.kind === 'folder').map((item) => item.sourcePath),
+    }, carrierSessionId)
+    const targetWorkspace = ctx.workspaceRegistry.get(plan.targetWorkspaceId)
+    if (targetWorkspace === undefined) throw new Error('目标工作区不存在')
+    const fileTag = sanitizeFolderName(plan.sessionTitle, 24)
+    const targetSessionsDir = join(targetWorkspace.path, config.sessionsDirName)
+    await mkdir(targetSessionsDir, { recursive: true })
+    let targetSessionFolder = await findSessionFolder(targetSessionsDir, plan.sessionId)
+    const decisions = new Map((Array.isArray(input.decisions) ? input.decisions : [])
+      .filter((entry) => entry !== null && typeof entry === 'object' && typeof entry.id === 'string')
+      .map((entry) => [entry.id, entry]))
+    const moved = []
+    const canceled = []
+    const failed = []
+    for (const item of plan.unknown) {
+      const decision = decisions.get(item.id)
+      if (decision === undefined || decision.action !== 'move') {
+        canceled.push(item.label)
+        continue
+      }
+      const source = item.sourcePath
+      if (!(await pathExists(source))) {
+        failed.push(`${item.label}：源已不存在`)
+        continue
+      }
+      let destinationDir
+      if (decision.destination === 'session') {
+        if (targetSessionFolder === undefined) {
+          targetSessionFolder = plan.targetSessionFolder
+          await mkdir(targetSessionFolder, { recursive: true })
+          await writeSessionMarker(targetSessionFolder, {
+            sessionId: plan.sessionId,
+            workspacePath: plan.targetWorkspacePath,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          })
+        }
+        destinationDir = targetSessionFolder
+      } else if (decision.destination === 'workspace') {
+        destinationDir = plan.targetWorkspacePath
+      } else if (decision.destination === 'custom') {
+        destinationDir = typeof decision.customPath === 'string' ? decision.customPath : ''
+        if (destinationDir === '' || !(await isDirectory(destinationDir))) {
+          failed.push(`${item.label}：自定义目录不存在`)
+          continue
+        }
+        await assertSafePath(destinationDir, '自定义去向')
+      } else {
+        failed.push(`${item.label}：未知去向`)
+        continue
+      }
+      try {
+        if (item.kind === 'folder') {
+          if (decision.destination === 'session') {
+            const actions = await mergeTreeVerified(source, destinationDir, item.label, { skip: ['.dsh-session'] })
+            moved.push(`${item.label}（合并 ${actions.length} 项）`)
+          } else {
+            const destination = join(destinationDir, await uniqueChildName(destinationDir, item.label))
+            await relocateDirectory(source, destination)
+            moved.push(`${item.label}（移动到 ${destination}）`)
+          }
+        } else {
+          let targetName = basename(source)
+          let targetPath = join(destinationDir, targetName)
+          if (await pathExists(targetPath)) {
+            const ext = targetName.includes('.') ? targetName.slice(targetName.lastIndexOf('.')) : ''
+            const base = ext === '' ? targetName : targetName.slice(0, -ext.length)
+            let index = 2
+            while (await pathExists(targetPath)) {
+              targetName = `${base}.${fileTag}-${index}${ext}`
+              targetPath = join(destinationDir, targetName)
+              index += 1
+            }
+          }
+          await mkdir(destinationDir, { recursive: true })
+          const result = await moveWrittenFile(source, targetPath)
+          moved.push(`${item.label}（${result}）`)
+        }
+      } catch (error) {
+        failed.push(`${item.label}：${error instanceof Error ? error.message : String(error)}`)
+      }
+    }
+    const lines = [baseText, '', '交互迁移结果：']
+    lines.push(`已按选择迁移 ${moved.length} 项，取消 ${canceled.length} 项，失败 ${failed.length} 项。`)
+    if (moved.length > 0) lines.push(`已迁移：${moved.slice(0, 20).join('、')}${moved.length > 20 ? ` 等 ${moved.length} 项` : ''}`)
+    if (canceled.length > 0) lines.push(`已取消（保留在原位置）：${canceled.slice(0, 20).join('、')}${canceled.length > 20 ? ` 等 ${canceled.length} 项` : ''}`)
+    if (failed.length > 0) lines.push(`失败：${failed.slice(0, 20).join('；')}${failed.length > 20 ? ` 等 ${failed.length} 项` : ''}`)
+    lines.push('请重启 DSH 刷新会话列表和服务缓存。')
     return lines.join('\n')
   }
 
@@ -1562,6 +1955,7 @@ export function apply (ctx, rawConfig = {}) {
 
     let writtenDeleted = 0
     let writtenSkipped = 0
+    let writtenRelative = 0
     let writtenError
     const writtenFailed = []
     if (deleteWrittenFiles) {
@@ -1574,8 +1968,12 @@ export function apply (ctx, rawConfig = {}) {
       }
       for (const raw of writtenPaths) {
         let sourceFile
+        if (!isAbsolutePath(raw)) {
+          writtenRelative += 1
+          continue
+        }
         try {
-          sourceFile = isAbsolutePath(raw) ? resolve(raw) : resolve(sourceWorkspacePath, raw)
+          sourceFile = resolve(raw)
         } catch {
           writtenFailed.push(`${raw}: 路径无效`)
           continue
@@ -1653,7 +2051,7 @@ export function apply (ctx, rawConfig = {}) {
       `会话日志目录：已删除（${record.dir}）`,
       `sessions/ 专属目录及其中文件：${folderDeleted ? `已删除（${folder}）` : '没有找到带 .dsh-session 标记的目录（未标记目录不会自动删除）'}`,
       deleteWrittenFiles
-        ? `会话在 sessions/ 之外写到工作区的文件：删除 ${writtenDeleted} 个${writtenSkipped > 0 ? `，跳过 ${writtenSkipped} 个（源工作区外、sessions/ 内或已不存在）` : ''}`
+        ? `会话在 sessions/ 之外写到工作区的文件：删除 ${writtenDeleted} 个${writtenSkipped > 0 ? `，跳过 ${writtenSkipped} 个（源工作区外、sessions/ 内或已不存在）` : ''}${writtenRelative > 0 ? `，相对路径 ${writtenRelative} 个未处理（无法确定写入时 cwd）` : ''}`
         : '会话在 sessions/ 之外写到工作区的文件：未勾选删除，已保留',
       detached ? '工作区归属：已移除。' : '工作区归属：移除失败，重启 DSH 后请在侧边栏手动处理。',
       '请重启 DSH 刷新会话列表和缓存。',
@@ -1727,6 +2125,7 @@ export function apply (ctx, rawConfig = {}) {
         : sessionId
       let files = []
       let skipped = 0
+      let relative = 0
       let writtenError
       if (deleteWrittenFiles) {
         let writtenPaths = []
@@ -1737,8 +2136,12 @@ export function apply (ctx, rawConfig = {}) {
         }
         for (const raw of writtenPaths) {
           let sourceFile
+          if (!isAbsolutePath(raw)) {
+            relative += 1
+            continue
+          }
           try {
-            sourceFile = isAbsolutePath(raw) ? resolve(raw) : resolve(sourceWorkspacePath, raw)
+            sourceFile = resolve(raw)
           } catch {
             skipped += 1
             continue
@@ -1771,7 +2174,7 @@ export function apply (ctx, rawConfig = {}) {
           files.push({ rel, size: info.size })
         }
       }
-      entries.push({ sessionId, title, sourceWorkspacePath, folder, files, skipped, writtenError })
+      entries.push({ sessionId, title, sourceWorkspacePath, folder, files, skipped, relative, writtenError })
     }
     const lines = [`删除预览：共 ${ids.length} 个会话`]
     for (const entry of entries) {
@@ -1782,7 +2185,7 @@ export function apply (ctx, rawConfig = {}) {
       } else if (entry.writtenError !== undefined) {
         lines.push(`  外部文件：读取记录失败（${entry.writtenError instanceof Error ? entry.writtenError.message : String(entry.writtenError)}）`)
       } else {
-        lines.push(`  外部文件：${entry.files.length} 个${entry.skipped > 0 ? `，跳过 ${entry.skipped} 个` : ''}`)
+        lines.push(`  外部文件：${entry.files.length} 个${entry.skipped > 0 ? `，跳过 ${entry.skipped} 个` : ''}${entry.relative > 0 ? `，相对路径 ${entry.relative} 个未处理` : ''}`)
         for (const file of entry.files.slice(0, 20)) {
           lines.push(`    - ${file.rel}（${file.size} 字节）`)
         }
@@ -1972,13 +2375,32 @@ export function apply (ctx, rawConfig = {}) {
   }))
 
   ctx.effect(() => ctx.commands.register({
+    name: 'session-relocate-plan',
+    description: '预览会话迁移；返回无法确定去向的文件/目录，由用户选择或取消（“工作区”设置页使用）',
+    input: { hint: '{"sessionId":"…","targetWorkspaceId":"…"}' },
+    handler: async ({ rawInput, signal, agent }) => {
+      try {
+        signal?.throwIfAborted()
+        const text = await runSessionRelocatePlan(parseJsonInput(rawInput), agent?.id)
+        return { kind: 'success', text }
+      } catch (error) {
+        ctx.logger.warn('workspace-organizer: 生成会话迁移计划失败', error)
+        return { kind: 'error', text: error instanceof Error ? error.message : String(error) }
+      }
+    },
+  }))
+
+  ctx.effect(() => ctx.commands.register({
     name: 'session-relocate',
     description: '把未运行的会话移动到另一个工作区（“工作区”设置页使用）',
     input: { hint: '{"sessionId":"…","targetWorkspaceId":"…"}' },
     handler: async ({ rawInput, signal, agent }) => {
       try {
         signal?.throwIfAborted()
-        const text = await withOperationLock(() => runSessionRelocate(parseJsonInput(rawInput), agent?.id))
+        const input = parseJsonInput(rawInput)
+        const text = input.planToken !== undefined && input.planToken !== ''
+          ? await withOperationLock(() => runSessionRelocateDecisions(input, agent?.id))
+          : await withOperationLock(() => runSessionRelocate(input, agent?.id))
         return { kind: 'success', text }
       } catch (error) {
         ctx.logger.warn('workspace-organizer: 移动会话失败', error)

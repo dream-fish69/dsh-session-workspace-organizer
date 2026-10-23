@@ -19,8 +19,12 @@ First public release.
 
 **Session management**
 - Move idle sessions (single or batch) to another workspace, including their logs, their session folder and files they wrote inside the source workspace.
+- Single-session moves can preview unresolved files/folders: unmarked legacy session folders, relative write paths, files outside the source workspace, target conflicts, and an optional project folder. Each item can be sent to the target session folder, the target workspace root, a custom directory, or canceled (default). Known files move automatically; canceled items stay in place.
+- Optional legacy session folder and project folder fields merge/move those explicitly. Existing target files are never overwritten: conflicts keep the target and get a source-tagged copy (for example `verify.COT中文翻译插件.md`).
+- If the target already has the session folder (for example a marker-only folder), the source folder is merged into it instead of creating a duplicate.
 - Delete idle sessions with a dry-run preview; optional removal of the files the session wrote.
-- Destructive commands require a one-time confirmation token minted by the check/preview step.
+- Destructive commands require a one-time confirmation token minted by the check/preview step; the interactive relocation plan uses a 5-minute `session-relocate-plan` token.
+- Tests cover path safety, marker folders, verified copy/merge with hashes, same-volume relocation, header rewriting and written-path parsing.
 
 **Structure**
 - `sessions/` bootstrap with `sessions/README.md`.

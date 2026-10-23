@@ -66,8 +66,11 @@ Creates `sessions/` and `sessions/README.md` when missing. With **move loose fil
 
 ### Sessions
 
-- **Move to workspace…** — moves idle sessions (single or batch) into another workspace: their logs, their `sessions/` folder with everything inside it, and files the session wrote through `write`/`edit` elsewhere inside the source workspace. Name conflicts at the destination abort that session instead of overwriting.
+- **Move to workspace…** — moves idle sessions (single or batch) into another workspace: their logs, their `sessions/` folder with everything inside it, and files the session wrote through `write`/`edit` elsewhere inside the source workspace.
+- **Unresolved files (single move)** — click **Preview unresolved files** before moving. The plan lists unmarked legacy session folders, relative write paths (write-time cwd unknown), files outside the source workspace, target conflicts, and an optional project folder. For each row choose **Target session folder**, **Target workspace root**, **Custom directory…**, or **Cancel this item** (default). Known files move automatically; canceled items stay where they are.
+- **Legacy folders/projects** — the optional **Legacy session folder** and **Project folder** fields merge/move those explicitly. Conflicting files keep the target file and get a source-tagged copy such as `verify.COT中文翻译插件.md`; nothing is overwritten.
 - **Delete** — permanent deletion of idle sessions, with a **preview** first that lists the log, the session folder and any external files that would go away. Files written by that session outside `sessions/` are only removed when you tick that option, and only inside the session's source workspace.
+- Batch moves still use the known destinations; unresolved items are reported and left in place. Use a single move when you need to choose a destination per item.
 
 ## Per-session output folders
 
