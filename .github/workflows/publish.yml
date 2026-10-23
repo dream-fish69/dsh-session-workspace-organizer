@@ -1,5 +1,6 @@
-name: publish
 
+
+name: publish
 # Publishes to npm when a `v*` tag is pushed.
 #
 # Authentication uses npm Trusted Publishing (OIDC): no NPM_TOKEN secret is needed.
@@ -10,31 +11,25 @@ name: publish
 #
 # The very first version of a brand-new package may still have to be published
 # once locally (`npm login` + `npm publish`); after that this workflow owns it.
-
 on:
   push:
     tags:
       - 'v*'
   workflow_dispatch:
-
 permissions:
   contents: read
   id-token: write
-
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           registry-url: https://registry.npmjs.org
-
       - name: Check syntax
         run: npm run check
-
       - name: Tag must match package.json version
         run: |
           node -e '
@@ -46,6 +41,20 @@ jobs:
             }
             console.log(`publishing ${v}`);
           '
-
+      # A version published by hand before the tag was pushed must not turn the
+      # build red: check the registry first and skip the upload when it exists.
+      - name: Check whether this version is already published
+        id: published
+        run: |
+          name=$(node -p "require('./package.json').name")
+          version=$(node -p "require('./package.json').version")
+          if npm view "$name@$version" version >/dev/null 2>&1; then
+            echo "already published: $name@$version"
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "not published yet: $name@$version"
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
       - name: Publish
+        if: steps.published.outputs.exists == 'false'
         run: npm publish --provenance --access public
