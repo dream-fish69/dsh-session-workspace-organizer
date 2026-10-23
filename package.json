@@ -1,6 +1,6 @@
 {
   "name": "dsh-session-workspace-organizer",
-  "version": "1.18.0",
+  "version": "1.11.0",
   "description": "Move a DSH workspace folder to a new path, give every new session its own output folder under sessions/, and restart the desktop app from the header.",
   "type": "module",
   "main": "index.js",
