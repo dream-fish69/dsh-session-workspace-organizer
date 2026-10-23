@@ -6,3 +6,9 @@ dist/
 Thumbs.db
 .env
 .env.*
+
+# test artifacts
+tests/_tmp/
+tests/_perf/
+tests/_edge*/
+tests/*.tmp
