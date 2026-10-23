@@ -1,5 +1,3 @@
-
-
 name: publish
 # Publishes to npm when a `v*` tag is pushed.
 #
