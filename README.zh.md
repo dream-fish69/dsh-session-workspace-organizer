@@ -3,15 +3,16 @@
 [![npm version](https://img.shields.io/npm/v/dsh-session-workspace-organizer.svg)](https://www.npmjs.com/package/dsh-session-workspace-organizer)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-> [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）插件：把工作区文件夹迁移到新位置，并让每个新会话在 `sessions/` 下拥有自己的输出目录。
+> [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）插件：把工作区文件夹迁移到新位置，让每个新会话在 `sessions/` 下拥有自己的输出目录，并可从顶栏整进程重启应用。
 
 [English](README.md) | 简体中文
 
-DSH 把每个会话绑定到一个工作区目录，同一个工作区的所有会话共用这个目录——于是不同对话产生的脚本、日志、下载、截图全堆在一处。本插件在 DSH 自己的模型上补三件事，不修改 DSH 源码：
+DSH 把每个会话绑定到一个工作区目录，同一个工作区的所有会话共用这个目录——于是不同对话产生的脚本、日志、下载、截图全堆在一处。本插件在 DSH 自己的模型上补四件事，不修改 DSH 源码：
 
 1. **迁移工作区**——把文件夹搬到别的路径或别的磁盘，会话跟着走：每个会话日志 header 里的 `cwd` 改写到新路径，会话照常可用，并继续归在新工作区下。
 2. **每个会话一个输出目录**——新建或恢复会话时自动得到 `<工作区>/sessions/<YYYY-MM-DD>_<会话标题>/`；插件通过会话级系统提示告诉模型把新产物放这里；在**工作区根目录**新建文件时 `write` 会先弹确认。
 3. **会话管理**——把未运行的会话移到别的工作区，或删除会话（带预览），可选连同它创建的文件一起删。
+4. **顶栏重启**——结束并重启整个 DSH 进程，带确认对话框、忙时守卫和进度层，而不是一个卡死的页面。
 
 已在 **Windows + DSH Desktop 0.2.1-rc.2** 上验证。Host 端只用 Node 内置模块，客户端是手写的 CommonJS bundle，**没有构建步骤**。
 
@@ -79,6 +80,18 @@ dsh plugin --profile web remove dsh-session-workspace-organizer
 - 该会话的作用域系统提示会告知模型：本会话新建的脚本、日志、下载、截图、临时数据、一次性产物都放这个目录，已有项目代码在原位置修改；
 - 在**工作区根目录**用 `write` 新建文件会弹确认；已存在的文件与常见清单（`README.md`、`AGENTS.md`、`package.json`、各类 lockfile、`Makefile`、`Dockerfile` 等）不拦。
 
+## 顶栏重启
+
+顶栏的重启按钮结束并重启**整个应用**，让缓存的服务、插件和模块全部从磁盘重新加载——和刷新页面不是一回事。
+
+- **先问再做**：点击后弹出确认框，说明整个应用会关闭再启动、进行中的工作会被打断。Esc、点遮罩、取消都能关掉，误点不会直接断会话。
+- **保护进行中的工作**：有会话正在生成、有排队中的轮次或后台任务时，确认按钮变成红色的「仍要重启」且不再是默认动作；`{"force": true}` 可在服务端越过该守卫，格式不正确的请求永远不算 force。
+- **有进度，不是卡死**：全屏进度层（双环 spinner + 不确定进度条 + 状态行）直接画在 `document.body` 上，所以 React 树被拆掉也不会消失；重启失败会转成红色状态并写明错误与恢复办法，而不是一直转圈。
+- **不弹原生错误框**：DSH Desktop 把 Host 子进程的任何退出都当致命错误并弹系统对话框（渲染层盖不住）。所以助手先结束 Electron 主进程，让 Host 沿自己的 IPC 断开路径收尾，等进程树消失后再拉起应用，并验证新进程确实活着。
+- 重启日志只保留最近 20 组；被强杀的 JSONL 写在下次打开时自动修复，退出不会写坏会话日志。
+
+`GET /workspace-organizer/restart` 会报告当前能否重启（`mode`、`revision`、`lastError`），有活干时返回 `409` + `busy: true`。
+
 ## 配置
 
 在 profile 的 `cordis.patch.yml` 里按行 id 覆盖：
@@ -112,15 +125,17 @@ dsh plugin --profile web remove dsh-session-workspace-organizer
 
 | 层 | 文件 | 负责 |
 | --- | --- | --- |
-| Host | `index.js` | 注册 `workspace-relocate-check` / `workspace-relocate-strict` / `workspace-organize` / `session-relocate` / `session-relocate-batch` / `session-delete-preview` / `session-delete` / `session-delete-batch`；`agent/created` 建会话目录与作用域提示；`session/event` 跟随标题改名；`tools/pre-execute` 拦截根目录写入 |
+| Host | `index.js` | 注册 `workspace-relocate-check` / `workspace-relocate-strict` / `workspace-organize` / `session-relocate-plan` / `session-relocate` / `session-relocate-batch` / `session-delete-preview` / `session-delete` / `session-delete-batch`；`agent/created` 建会话目录与作用域提示；`session/event` 跟随标题改名；`tools/pre-execute` 拦截根目录写入；提供重启路由 |
 | Host | `lib/fs-ops.js` | 目录移动（同盘 rename / 跨盘复制 + 校验 + 回滚）、名称净化、散件扫描 |
 | Host | `lib/session-logs.js` | 解析 zstd 第一帧 header，只改写 `cwd`，后续帧原样保留；会话日志目录重定位 |
-| Client | `client.js` | `settings.section` 页面：移动 / 整理 / 会话三个面板，文案取自 `locale/*.json` |
+| Host | `lib/restart.js` | 整进程重启：先结束 shell（避免原生错误框）、分离式重启助手、存活校验、重启日志限量 |
+| Client | `client.js` | `settings.section` 页面：移动 / 整理 / 会话三个面板，外加顶栏重启按钮与确认框、进度层；文案取自 `locale/*.json` |
 
 ## 开发
 
 ```sh
-npm run check   # node --check index.js、client.js、lib/fs-ops.js、lib/session-logs.js
+npm run check   # node --check index.js、client.js、lib/ 下三个模块
+npm test        # node --test tests/（路径安全、复制/合并、header 改写、重启路由）
 ```
 
 没有打包器：`lib/` 就是源码，`client.js` 是 DSH 通过 `window.__ModuleLoader__` 加载的 bundle。改 Host 需要重启 DSH，改客户端刷新页面即可。

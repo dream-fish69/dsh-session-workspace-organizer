@@ -17,17 +17,32 @@ window.__ModuleLoader__.load({
         listEmpty: 'No workspaces are registered yet.',
         sessionsCount: '{n} sessions',
         'sessions.title': 'Session workspaces',
-        'sessions.note': 'Move an inactive session to another workspace. The session log, its sessions/ folder with all files, and files the session wrote outside sessions/ (from write/edit records) move together. Same-name files already in the target are not overwritten and are listed. Shell-created files are not tracked. Restart DSH afterwards.',
+        'sessions.note': 'Move an inactive session to another workspace. The session log, its sessions/ folder with all files, and files the session wrote outside sessions/ (from write/edit records) move together. Same-name files already in the target are not overwritten and are listed. Shell-created files are not tracked. Reload the plugin from the header when you are done.',
         'sessions.empty': 'No sessions found.',
         'sessions.search': 'Search sessions…',
         'sessions.noMatch': 'No matching sessions.',
         'sessions.more': 'Showing the first {n}; type to narrow the list.',
         'sessions.current': 'Current',
+        'head.refreshTitle': 'Refresh the interface',
+        'head.restartTitle': 'Restart DSH',
+        'head.restartDone': 'DSH is back.',
+        'head.restartFailed': 'Restart failed: {error}',
+        'head.restartTimeout': 'DSH did not come back in time. Start it manually if the page stays down.',
+        'head.confirmTitle': 'Restart DSH?',
+        'head.confirmBody': 'The whole application will close and start again. Running work is interrupted, and the page reconnects on its own.',
+        'head.confirmBusy': 'A session is still generating a reply. Restarting now cuts it off.',
+        'head.confirmCancel': 'Cancel',
+        'head.confirmOk': 'Restart',
+        'head.confirmBusyOk': 'Restart anyway',
+        'head.restartFailedHint': 'Start DSH manually, then reopen this page.',
+        'head.progressTitle': 'Restarting DSH',
+        'head.progressDetail': 'Closing the old process, then starting a fresh one.',
+        'head.progressHint': 'This page reconnects by itself. Do not close the window.',
         'sessions.move': 'Move to workspace…',
         'sessions.workspace': 'Workspace',
         'sessionMove.title': 'Move session to another workspace',
         'sessionMove.target': 'Target workspace',
-        'sessionMove.note': 'The target session must not be running. The session log header cwd is rewritten; the session’s sessions/ folder and files it wrote outside it (from write/edit records) are moved. Same-name target files are not overwritten. Restart DSH to refresh.',
+        'sessionMove.note': 'The target session must not be running. The session log header cwd is rewritten; the session’s sessions/ folder and files it wrote outside it (from write/edit records) are moved. Same-name target files are not overwritten. Reload the plugin from the header to refresh.',
         'sessionMove.confirm': 'Move session',
         'sessionMove.busy': 'Moving…',
         'sessionMove.done': 'Session moved.',
@@ -67,7 +82,7 @@ window.__ModuleLoader__.load({
         'sessionBatch.title': 'Move sessions to a workspace',
         'sessionBatch.target': 'Target workspace',
         'sessionBatch.selectedList': 'Selected sessions',
-        'sessionBatch.note': 'Only inactive sessions can move. The current session is not selectable; live sessions will be reported as failures. Each session’s log, its sessions/ folder, and files it wrote outside sessions/ move together; same-name target files are not overwritten. Restart DSH afterwards.',
+        'sessionBatch.note': 'Only inactive sessions can move. The current session is not selectable; live sessions will be reported as failures. Each session’s log, its sessions/ folder, and files it wrote outside sessions/ move together; same-name target files are not overwritten. Reload the plugin from the header when you are done.',
         'sessionBatch.confirm': 'Move selected sessions',
         'sessionBatch.busy': 'Moving sessions…',
         'sessionBatch.done': 'Batch move completed.',
@@ -95,7 +110,7 @@ window.__ModuleLoader__.load({
         'move.pick': 'Choose…',
         'move.picking': 'Choosing…',
         'move.target': 'New location: {path}',
-        'move.note': 'Strict move: the whole folder moves, the old path is deleted (no junction), and every session-log cwd is rewritten. The target workspace must have no running session — switch to a session in another workspace first. Close terminals and running tasks. If the old path is DSH\'s launch directory, update the shortcut afterwards. Restart DSH after the move.',
+        'move.note': 'Strict move: the whole folder moves, the old path is deleted (no junction), and every session-log cwd is rewritten. The target workspace must have no running session — switch to a session in another workspace first. Close terminals and running tasks. If the old path is DSH\'s launch directory, update the shortcut afterwards. Reload the plugin from the header after the move.',
         'move.confirm': 'Move workspace',
         'move.moving': 'Moving…',
         'move.done': 'Move completed.',
@@ -122,7 +137,7 @@ window.__ModuleLoader__.load({
         'error.nameReserved': 'That folder name is a reserved Windows name.',
         'error.noSession': 'No live session is available. Open a conversation and try again.',
         'error.noPicker': 'The directory picker is unavailable.',
-        'error.unknownCommand': 'The command was not recognized. Restart DSH and try again.',
+        'error.unknownCommand': 'The command was not recognized. Reload the plugin from the header and try again.',
         'error.noResult': 'The operation returned no result.',
       },
       zh: {
@@ -135,17 +150,32 @@ window.__ModuleLoader__.load({
         listEmpty: '还没有已注册的工作区。',
         sessionsCount: '{n} 个会话',
         'sessions.title': '会话归属',
-        'sessions.note': '把未运行的会话移动到另一个工作区：会话日志、sessions/ 专属文件夹及其中所有文件、以及会话通过 write/edit 在 sessions/ 之外写到工作区的文件都会一起移动。目标已有同名文件时不覆盖，会列出冲突；shell 命令直接创建的文件不在记录里。完成后重启 DSH。',
+        'sessions.note': '把未运行的会话移动到另一个工作区：会话日志、sessions/ 专属文件夹及其中所有文件、以及会话通过 write/edit 在 sessions/ 之外写到工作区的文件都会一起移动。目标已有同名文件时不覆盖，会列出冲突；shell 命令直接创建的文件不在记录里。完成后点标题栏的“重新加载插件”。',
         'sessions.empty': '没有找到会话。',
         'sessions.search': '搜索会话…',
         'sessions.noMatch': '没有匹配的会话。',
         'sessions.more': '只显示前 {n} 个，继续输入筛选。',
         'sessions.current': '当前',
+        'head.refreshTitle': '刷新界面',
+        'head.restartTitle': '重启 DSH',
+        'head.restartDone': 'DSH 已重新启动。',
+        'head.restartFailed': '重启失败：{error}',
+        'head.restartTimeout': '等待 DSH 启动超时；如果页面一直打不开，请手动启动。',
+        'head.confirmTitle': '要重启 DSH 吗？',
+        'head.confirmBody': '整个应用会关闭并重新启动。正在运行的工作会被中断，页面会自动重连。',
+        'head.confirmBusy': '还有会话正在生成回答，现在重启会中断它。',
+        'head.confirmCancel': '取消',
+        'head.confirmOk': '重启',
+        'head.confirmBusyOk': '仍然重启',
+        'head.restartFailedHint': '请手动启动 DSH，然后重新打开本页面。',
+        'head.progressTitle': '正在重启 DSH',
+        'head.progressDetail': '正在关闭旧进程，然后启动新的进程。',
+        'head.progressHint': '页面会自动重连，请不要关闭窗口。',
         'sessions.move': '移动到工作区…',
         'sessions.workspace': '工作区',
         'sessionMove.title': '把会话移动到另一个工作区',
         'sessionMove.target': '目标工作区',
-        'sessionMove.note': '目标会话必须处于未运行状态。移动会改写会话日志 header 的 cwd，并搬 sessions/ 专属文件夹及其中所有文件，以及会话通过 write/edit 写在 sessions/ 之外的文件；目标同名文件不覆盖。完成后重启 DSH 生效。',
+        'sessionMove.note': '目标会话必须处于未运行状态。移动会改写会话日志 header 的 cwd，并搬 sessions/ 专属文件夹及其中所有文件，以及会话通过 write/edit 写在 sessions/ 之外的文件；目标同名文件不覆盖。完成后点标题栏的“重新加载插件”生效。',
         'sessionMove.confirm': '移动会话',
         'sessionMove.busy': '正在移动…',
         'sessionMove.done': '会话移动完成。',
@@ -185,7 +215,7 @@ window.__ModuleLoader__.load({
         'sessionBatch.title': '把多个会话移动到工作区',
         'sessionBatch.target': '目标工作区',
         'sessionBatch.selectedList': '已选会话',
-        'sessionBatch.note': '只有未运行的会话能移动；当前会话不可选，其他正在运行的会话会在结果里报失败。每条会话的日志、sessions/ 专属文件夹，以及它通过 write/edit 写在 sessions/ 之外的文件都会一起移动；目标同名文件不覆盖。完成后重启 DSH。',
+        'sessionBatch.note': '只有未运行的会话能移动；当前会话不可选，其他正在运行的会话会在结果里报失败。每条会话的日志、sessions/ 专属文件夹，以及它通过 write/edit 写在 sessions/ 之外的文件都会一起移动；目标同名文件不覆盖。完成后点标题栏的“重新加载插件”。',
         'sessionBatch.confirm': '移动选中会话',
         'sessionBatch.busy': '正在批量移动…',
         'sessionBatch.done': '批量移动完成。',
@@ -213,7 +243,7 @@ window.__ModuleLoader__.load({
         'move.pick': '选择…',
         'move.picking': '选择中…',
         'move.target': '新位置：{path}',
-        'move.note': '严格迁移：整个文件夹（包括 sessions/）搬到新路径，旧路径删除（不再保留 junction），并改写每个会话日志的 cwd。目标工作区必须没有运行中的会话——请先切换到另一个工作区的会话再操作；请关闭该工作区里的终端和正在运行的任务。若旧目录被进程占用、无法重命名，会自动降级为复制迁移：副本放到新位置，旧目录保留，重启 DSH 确认后由你手动删除。如果旧路径是 DSH 的启动目录，移动后请修改快捷方式。完成后重启 DSH。',
+        'move.note': '严格迁移：整个文件夹（包括 sessions/）搬到新路径，旧路径删除（不再保留 junction），并改写每个会话日志的 cwd。目标工作区必须没有运行中的会话——请先切换到另一个工作区的会话再操作；请关闭该工作区里的终端和正在运行的任务。若旧目录被进程占用、无法重命名，会自动降级为复制迁移：副本放到新位置，旧目录保留，重启 DSH 确认后由你手动删除。如果旧路径是 DSH 的启动目录，移动后请修改快捷方式。完成后点标题栏的“重新加载插件”。',
         'move.blockedTitle': '有会话正在阻止迁移',
         'move.blockedBody': '以下会话仍在目标工作区里运行，迁移前需要先停止它们：',
         'move.blockedQuestion': '是否强制停止这些会话并继续迁移？',
@@ -240,7 +270,7 @@ window.__ModuleLoader__.load({
         'error.nameReserved': '文件夹名是 Windows 保留名。',
         'error.noSession': '没有可用的会话，无法执行命令。请先打开一个会话。',
         'error.noPicker': '目录选择器不可用。',
-        'error.unknownCommand': '命令没有被识别，请重启 DSH 后再试。',
+        'error.unknownCommand': '命令没有被识别，请点标题栏的“重新加载插件”后再试。',
         'error.noResult': '操作没有返回结果。',
       },
     }
@@ -311,6 +341,31 @@ window.__ModuleLoader__.load({
 .wso-delete-check input{margin-top:2px;flex:none;accent-color:#d92d20}
 .wso-delete-note{color:var(--dsw-alias-label-secondary);font-size:12px;line-height:18px;margin:0 0 8px 22px}
 .wso-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.wso-head-btn{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;flex:none;padding:0;border:none;border-radius:6px;background:transparent;color:var(--dsw-alias-label-tertiary);cursor:pointer}
+.wso-head-btn:hover:not(:disabled){background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-primary)}
+.wso-head-btn:focus-visible{outline:2px solid var(--dsw-alias-brand-primary);outline-offset:1px}
+.wso-head-btn:disabled{opacity:.45;cursor:default}
+.wso-head-btn[data-busy=true] svg{animation:wso-spin 1s linear infinite}
+.wso-head-wrap{display:inline-flex;align-items:center;gap:2px;margin-inline-start:2px}
+@keyframes wso-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.wso-head-toast{position:fixed;right:20px;bottom:20px;z-index:1300;max-width:360px;padding:10px 14px;border-radius:10px;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-overlay);color:var(--dsw-alias-label-primary);font-size:12px;line-height:18px;box-shadow:0 12px 32px rgba(0,0,0,.24)}
+.wso-head-toast[data-kind=error]{border-color:var(--dsw-alias-state-error-primary);color:var(--dsw-alias-state-error-primary)}
+.wso-restarting{position:fixed;inset:0;z-index:2147483000;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--dsw-alias-bg-base);animation:wso-fade-in .18s ease-out}
+.wso-restarting-card{display:flex;flex-direction:column;align-items:center;gap:12px;max-width:380px;text-align:center}
+.wso-restarting-ring{position:relative;width:46px;height:46px;flex:none}
+.wso-restarting-ring::before,.wso-restarting-ring::after{content:'';position:absolute;inset:0;border-radius:50%;border:3px solid transparent}
+.wso-restarting-ring::before{border-top-color:var(--dsw-alias-brand-primary);border-right-color:var(--dsw-alias-brand-primary);animation:wso-spin .85s linear infinite}
+.wso-restarting-ring::after{inset:7px;border-bottom-color:var(--dsw-alias-brand-primary);opacity:.45;animation:wso-spin 1.4s linear infinite reverse}
+.wso-restarting-title{font-size:15px;font-weight:600;line-height:22px;color:var(--dsw-alias-label-primary)}
+.wso-restarting-detail{font-size:13px;line-height:20px;color:var(--dsw-alias-label-secondary)}
+.wso-restarting-hint{font-size:12px;line-height:18px;color:var(--dsw-alias-label-caption)}
+.wso-restarting-bar{width:100%;height:3px;margin-top:2px;border-radius:999px;overflow:hidden;background:var(--dsw-alias-bg-layer-2)}
+.wso-restarting-bar span{display:block;width:38%;height:100%;border-radius:999px;background:var(--dsw-alias-brand-primary);animation:wso-indeterminate 1.15s ease-in-out infinite}
+.wso-restarting[data-state=failed] .wso-restarting-ring::before{border-top-color:var(--dsw-alias-state-error-primary);border-right-color:var(--dsw-alias-state-error-primary);animation:none}
+.wso-restarting[data-state=failed] .wso-restarting-ring::after{display:none}
+.wso-restarting[data-state=failed] .wso-restarting-bar{display:none}
+@keyframes wso-fade-in{from{opacity:0}to{opacity:1}}
+@keyframes wso-indeterminate{0%{transform:translateX(-100%)}50%{transform:translateX(60%)}100%{transform:translateX(260%)}}
 `
 
     function baseName (path) {
@@ -1210,7 +1265,6 @@ window.__ModuleLoader__.load({
       }, [executeCommand, t])
 
       return h('div', { className: 'wso-page' },
-        h('style', null, CSS),
         h('h2', null, t('title')),
         h('p', { className: 'wso-intro' }, t('intro')),
         h('p', { className: 'wso-note' }, t('sessionFoldersNote')),
@@ -1354,10 +1408,340 @@ window.__ModuleLoader__.load({
         }) : null)
     }
 
+    /**
+     * Full-screen restart progress layer, built with plain DOM on purpose.
+     *
+     * A restart tears down the React tree that rendered the button, and the
+     * window disappears entirely while the replacement boots. An overlay owned
+     * by document.body sits outside both: it keeps the user looking at one calm
+     * "restarting" card instead of a frozen page, and it is removed only when
+     * this code decides to reload or to give up.
+     */
+    const RESTART_OVERLAY_ID = 'wso-restart-overlay'
+    let restartOverlayEl = null
+
+    function restartOverlayRoot () {
+      if (typeof document === 'undefined') return null
+      if (restartOverlayEl !== null && restartOverlayEl.isConnected) return restartOverlayEl
+      const existing = document.getElementById(RESTART_OVERLAY_ID)
+      if (existing !== null) {
+        restartOverlayEl = existing
+        return existing
+      }
+      const root = document.createElement('div')
+      root.id = RESTART_OVERLAY_ID
+      root.className = 'wso-restarting'
+      root.dataset.state = 'working'
+      root.setAttribute('role', 'status')
+      root.setAttribute('aria-live', 'polite')
+
+      const card = document.createElement('div')
+      card.className = 'wso-restarting-card'
+
+      const ring = document.createElement('div')
+      ring.className = 'wso-restarting-ring'
+
+      const title = document.createElement('div')
+      title.className = 'wso-restarting-title'
+
+      const detail = document.createElement('div')
+      detail.className = 'wso-restarting-detail'
+
+      const bar = document.createElement('div')
+      bar.className = 'wso-restarting-bar'
+      bar.append(document.createElement('span'))
+
+      const hint = document.createElement('div')
+      hint.className = 'wso-restarting-hint'
+
+      card.append(ring, title, detail, bar, hint)
+      root.append(card)
+      document.body.append(root)
+      restartOverlayEl = root
+      return root
+    }
+
+    function showRestartOverlay (text) {
+      const root = restartOverlayRoot()
+      if (root === null) return
+      root.dataset.state = 'working'
+      root.querySelector('.wso-restarting-title').textContent = text.title
+      root.querySelector('.wso-restarting-detail').textContent = text.detail
+      root.querySelector('.wso-restarting-hint').textContent = text.hint
+    }
+
+    function failRestartOverlay (text) {
+      const root = restartOverlayRoot()
+      if (root === null) return
+      root.dataset.state = 'failed'
+      root.querySelector('.wso-restarting-title').textContent = text.title
+      root.querySelector('.wso-restarting-detail').textContent = text.detail
+      root.querySelector('.wso-restarting-hint').textContent = text.hint
+    }
+
+    function hideRestartOverlay () {
+      if (typeof document === 'undefined') return
+      const root = restartOverlayEl !== null && restartOverlayEl.isConnected
+        ? restartOverlayEl
+        : document.getElementById(RESTART_OVERLAY_ID)
+      if (root !== null) root.remove()
+      restartOverlayEl = null
+    }
+
+    /**
+     * Confirmation dialog shown before a restart.
+     *
+     * Restarting ends the application, so a stray click must not do it. The
+     * dialog states the consequence, warns separately when work is live, and
+     * makes the interrupting choice the non-default one.
+     */
+    function RestartConfirmDialog (props) {
+      const t = props.t
+      const busy = props.busy === true
+      const onClose = props.onClose
+      React.useEffect(() => {
+        const onKey = (event) => {
+          if (event.key === 'Escape') onClose()
+        }
+        window.addEventListener('keydown', onKey)
+        return () => window.removeEventListener('keydown', onKey)
+      }, [onClose])
+      return h('div', {
+        className: 'wso-backdrop',
+        onMouseDown: (event) => {
+          if (event.target === event.currentTarget) props.onClose()
+        },
+      }, h('div', {
+        className: 'wso-dialog',
+        role: 'dialog',
+        'aria-modal': 'true',
+        'aria-labelledby': 'wso-restart-confirm-title',
+      },
+      h('h3', { id: 'wso-restart-confirm-title' }, t('head.confirmTitle')),
+      h('p', { className: 'wso-delete-note', style: { marginLeft: 0 } }, t('head.confirmBody')),
+      busy ? h('div', { className: 'wso-confirm' },
+        h('p', { className: 'wso-confirm-title' }, t('head.confirmBusy'))) : null,
+      h('div', { className: 'wso-actions' },
+        h('button', {
+          type: 'button',
+          className: 'wso-btn',
+          onClick: props.onClose,
+        }, t('head.confirmCancel')),
+        h('button', {
+          type: 'button',
+          className: busy ? 'wso-btn wso-danger' : 'wso-btn wso-primary',
+          autoFocus: true,
+          onClick: props.onConfirm,
+        }, busy ? t('head.confirmBusyOk') : t('head.confirmOk')))))
+    }
+
+    /**
+     * Two header utilities: refresh the page, and restart the whole DSH process.
+     *
+     * Refresh is a plain `location.reload()` — it re-runs the boot payload and
+     * every client plugin, which is what clears the stale UI states this plugin's
+     * moves and deletes leave behind. It changes nothing on the Host.
+     *
+     * Restart ends the entire application and starts it again, so every cached
+     * service, plugin and module is rebuilt from disk. The browser cannot do that
+     * itself: it has to ask the Host, which schedules a detached helper and then
+     * goes down with the process tree. The page therefore polls until a DIFFERENT
+     * boot id answers — proof that a genuinely new process is serving — and only
+     * then reloads.
+     */
+    function HeaderProcessControls (ownerProps) {
+      const t = typeof ownerProps.t === 'function' ? ownerProps.t : (key) => key
+      // The utilities slot passes no owner props, so bind the dictionary here.
+      const translate = ownerProps.translate
+      const tt = typeof translate === 'function' ? translate : t
+      const [busy, setBusy] = React.useState(false)
+      const [toast, setToast] = React.useState(null)
+      // Set when the Host refused because live work would be cut off; the next
+      // click is the user's confirmation to interrupt it.
+      const [confirmForce, setConfirmForce] = React.useState(false)
+      // Restart is destructive to running work, so it always asks first.
+      const [confirming, setConfirming] = React.useState(false)
+      const timerRef = React.useRef(null)
+
+      const showToast = React.useCallback((text, kind) => {
+        setToast({ text, kind })
+        if (timerRef.current !== null) window.clearTimeout(timerRef.current)
+        timerRef.current = window.setTimeout(() => {
+          setToast(null)
+          setConfirmForce(false)
+        }, kind === 'error' ? 8000 : 4000)
+      }, [])
+
+      React.useEffect(() => () => {
+        if (timerRef.current !== null) window.clearTimeout(timerRef.current)
+      }, [])
+
+      const refresh = React.useCallback(() => {
+        if (busy) return
+        setBusy(true)
+        window.location.reload()
+      }, [busy])
+
+      const restart = React.useCallback(async (force) => {
+        if (busy) return
+        setBusy(true)
+        // The overlay is owned by document.body, so it survives the React tree
+        // being torn down when the process goes away.
+        showRestartOverlay({
+          title: tt('head.progressTitle'),
+          detail: tt('head.progressDetail'),
+          hint: tt('head.progressHint'),
+        })
+        try {
+          const response = await fetch('/workspace-organizer/restart', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            credentials: 'same-origin',
+            body: JSON.stringify({ force: force === true }),
+          })
+          const payload = await response.json().catch(() => null)
+          // 409 + busy means live work would be cut off. Ask instead of doing
+          // it silently: an accidental click must not truncate a reply.
+          if (response.status === 409 && payload !== null && payload.busy === true) {
+            // Live work would be cut off: drop the overlay and re-open the
+            // dialog in its "restart anyway" form instead of forcing it.
+            hideRestartOverlay()
+            setBusy(false)
+            setConfirmForce(true)
+            setConfirming(true)
+            return
+          }
+          if (!response.ok || payload === null || payload.ok !== true) {
+            throw new Error(payload !== null && typeof payload.error === 'string' ? payload.error : `HTTP ${String(response.status)}`)
+          }
+          // The whole process tree is about to end, so this page will lose its
+          // connection. Wait for the Host to answer again with a different boot
+          // id: the old process replied with the previous one, so a changed id
+          // is proof that a genuinely new process is serving.
+          const deadline = Date.now() + 120_000
+          let cameBack = false
+          while (Date.now() < deadline) {
+            await new Promise((resolve) => window.setTimeout(resolve, 800))
+            try {
+              const probe = await fetch('/workspace-organizer/restart', { method: 'GET', cache: 'no-store' })
+              if (!probe.ok) continue
+              const status = await probe.json().catch(() => null)
+              if (status === null || status.ok !== true) continue
+              if (typeof status.boot === 'string' && status.boot !== payload.boot) {
+                cameBack = true
+                break
+              }
+            } catch {
+              // Still down; keep waiting.
+            }
+          }
+          if (!cameBack) throw new Error(tt('head.restartTimeout'))
+          showToast(tt('head.restartDone'))
+          window.location.reload()
+        } catch (failure) {
+          const message = failure instanceof Error ? failure.message : String(failure)
+          failRestartOverlay({
+            title: tt('head.restartFailed').replace('{error}', message),
+            detail: tt('head.restartFailedHint'),
+            hint: tt('head.progressHint'),
+          })
+          showToast(tt('head.restartFailed').replace('{error}', message), 'error')
+          // Always release the button: a failed restart must leave the header
+          // usable instead of stuck on a spinner until the page is reloaded.
+          setBusy(false)
+          setConfirming(false)
+          setConfirmForce(false)
+          window.setTimeout(() => hideRestartOverlay(), 6000)
+        }
+      }, [busy, confirmForce, showToast, tt])
+
+      return h(React.Fragment, null,
+        h('div', { className: 'wso-head-wrap' },
+          h('button', {
+            type: 'button',
+            className: 'wso-head-btn',
+            title: tt('head.refreshTitle'),
+            'aria-label': tt('head.refreshTitle'),
+            disabled: busy,
+            onClick: refresh,
+          }, h('svg', { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', 'aria-hidden': 'true' },
+            h('path', {
+              d: 'M13.2 8a5.2 5.2 0 1 1-1.6-3.7M13.2 2.6v3.2H10',
+              stroke: 'currentColor',
+              strokeWidth: 1.4,
+              strokeLinecap: 'round',
+              strokeLinejoin: 'round',
+            }))),
+          h('button', {
+            type: 'button',
+            className: 'wso-head-btn',
+            'data-busy': busy ? 'true' : 'false',
+            title: tt('head.restartTitle'),
+            'aria-label': tt('head.restartTitle'),
+            disabled: busy,
+            onClick: () => { if (!busy) setConfirming(true) },
+          }, h('svg', { width: 16, height: 16, viewBox: '0 0 16 16', fill: 'none', 'aria-hidden': 'true' },
+            h('path', {
+              d: 'M8 2.4a5.6 5.6 0 1 0 5.6 5.6M8 2.4v3.2M8 2.4 5.4 4.6',
+              stroke: 'currentColor',
+              strokeWidth: 1.4,
+              strokeLinecap: 'round',
+              strokeLinejoin: 'round',
+            })))),
+        confirming ? h(RestartConfirmDialog, {
+          t: tt,
+          busy: confirmForce,
+          onClose: () => {
+            setConfirming(false)
+            setConfirmForce(false)
+          },
+          onConfirm: () => {
+            setConfirming(false)
+            void restart(confirmForce)
+          },
+        }) : null,
+        toast === null ? null : h('div', {
+          className: 'wso-head-toast',
+          'data-kind': toast.kind ?? 'info',
+          role: toast.kind === 'error' ? 'alert' : 'status',
+        }, toast.text))
+    }
+
     return {
       inject: ['slots', 'locale', 'remote', 'remote.commands', 'remote.directoryPicker', 'uiWorkspace'],
       apply(ctx) {
         ctx.effect(() => ctx.locale.register(NS, MESSAGES))
+        // Inject the stylesheet once at the document level: the restart overlay
+        // lives on <body>, outside the settings page that also renders this CSS.
+        // Deferred and guarded: `apply` can run before <head> exists, and a
+        // throw here would fail the whole client entry activation.
+        ctx.effect(() => {
+          let style = null
+          const install = () => {
+            if (typeof document === 'undefined') return
+            if (document.getElementById('wso-global-style') !== null) return
+            const head = document.head ?? document.documentElement
+            if (head === null || head === undefined) return
+            style = document.createElement('style')
+            style.id = 'wso-global-style'
+            style.textContent = CSS
+            head.append(style)
+          }
+          install()
+          if (style === null && typeof document !== 'undefined' && document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', install, { once: true })
+          }
+          return () => {
+            try { style?.remove() } catch {}
+          }
+        })
+        ctx.slots.inject('conversation.session.header.utilities', () => ctx.slots.register({
+          name: 'conversation.session.header.utilities',
+          id: 'workspace-organizer-process-controls',
+          order: 50,
+          locale: NS,
+          inject: () => ({ translate: ctx.locale.bind(NS) }),
+        }, HeaderProcessControls))
         ctx.slots.inject('settings.section', () => ctx.slots.register({
           name: 'settings.section',
           id: 'workspace-organizer',

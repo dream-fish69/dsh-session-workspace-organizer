@@ -4,6 +4,16 @@ import { cp, mkdir, readFile, realpath, rename, rm, rmdir, stat, writeFile } fro
 import { basename, dirname, join, parse, relative, resolve } from 'node:path'
 import os from 'node:os'
 import {
+  bootId,
+  isDirectLoopback,
+  isSameOrigin,
+  restartLogDir,
+  restartState,
+  scheduleRestart,
+  servingPort,
+  shellPid,
+} from './lib/restart.js'
+import {
   copyDirectoryKeepingSource,
   createUniqueDirectory,
   ensureFile,
@@ -77,6 +87,7 @@ export const inject = [
   'systemPrompt',
   'sandboxPolicy',
   'sessionPersistence',
+  'webServer',
 ]
 
 /**
@@ -107,6 +118,7 @@ function readConfig (raw) {
     sessionsDirName,
     maxTitleChars,
     sessionsRoot,
+    dshHome: home,
     sessionFolders: source.sessionFolders !== false,
     guardRootWrites: source.guardRootWrites !== false,
   }
@@ -241,6 +253,7 @@ export function apply (ctx, rawConfig = {}) {
   const confirmations = new Map()
   const relocationPlans = new Map()
   let operationTail = Promise.resolve()
+  let activeOperations = 0
 
   /**
    * Serialize destructive operations so pending/registry/log changes cannot
@@ -249,9 +262,10 @@ export function apply (ctx, rawConfig = {}) {
    * @returns the operation result.
    */
   function withOperationLock (operation) {
+    activeOperations += 1
     const run = operationTail.then(operation, operation)
     operationTail = run.then(() => undefined, () => undefined)
-    return run
+    return run.finally(() => { activeOperations -= 1 })
   }
 
   /**
@@ -1082,7 +1096,7 @@ export function apply (ctx, rawConfig = {}) {
       if (attachFailures.length > 0) {
         lines.push(`有 ${attachFailures.length} 个会话将在重启 DSH 后自动归位。`)
       }
-      lines.push('请重启 DSH 以刷新会话列表和服务缓存。')
+      lines.push('请点会话标题栏的“重新加载插件”刷新会话列表和服务缓存。')
       if (cwdInside) {
         lines.push('DSH 进程的工作目录已切到新路径；如果桌面快捷方式的启动目录是旧路径，请改为新路径。')
       }
@@ -1488,7 +1502,7 @@ export function apply (ctx, rawConfig = {}) {
             ? '会话在 sessions/ 之外写到工作区的文件：没有 write/edit 记录'
             : `会话在 sessions/ 之外写到工作区的文件：记录 ${writtenPaths.length} 个，移动 ${writtenMoved.length} 个${writtenConflicts.length > 0 ? `，同名未覆盖 ${writtenConflicts.length} 个` : ''}${writtenFailed.length > 0 ? `，失败 ${writtenFailed.length} 个` : ''}${writtenSkipped > 0 ? `，跳过 ${writtenSkipped} 个（源工作区外、sessions/ 内或已不存在）` : ''}${writtenRelative > 0 ? `，相对路径 ${writtenRelative} 个未处理（无法确定写入时 cwd）` : ''}`),
       attached ? '会话归属：已立即挂到目标工作区。' : '会话归属：目标工作区暂未接收，已写入待归属记录，重启 DSH 后自动归位。',
-      '请重启 DSH 刷新会话列表和服务缓存。',
+      '请点会话标题栏的“重新加载插件”刷新会话列表和服务缓存。',
     ]
     if (legacyNote !== undefined) lines.push(`旧会话文件夹：${legacyNote}`)
     if (projectNote !== undefined) lines.push(`项目目录：${projectNote}`)
@@ -1816,7 +1830,7 @@ export function apply (ctx, rawConfig = {}) {
     if (moved.length > 0) lines.push(`已迁移：${moved.slice(0, 20).join('、')}${moved.length > 20 ? ` 等 ${moved.length} 项` : ''}`)
     if (canceled.length > 0) lines.push(`已取消（保留在原位置）：${canceled.slice(0, 20).join('、')}${canceled.length > 20 ? ` 等 ${canceled.length} 项` : ''}`)
     if (failed.length > 0) lines.push(`失败：${failed.slice(0, 20).join('；')}${failed.length > 20 ? ` 等 ${failed.length} 项` : ''}`)
-    lines.push('请重启 DSH 刷新会话列表和服务缓存。')
+    lines.push('请点会话标题栏的“重新加载插件”刷新会话列表和服务缓存。')
     return lines.join('\n')
   }
 
@@ -1878,7 +1892,7 @@ export function apply (ctx, rawConfig = {}) {
       lines.push('失败：')
       for (const failure of failures) lines.push(`- ${failure.title}：${failure.message}`)
     }
-    if (successes.length > 0) lines.push('请重启 DSH 刷新会话列表和服务缓存。')
+    if (successes.length > 0) lines.push('请点会话标题栏的“重新加载插件”刷新会话列表和服务缓存。')
     return lines.join('\n')
   }
 
@@ -2484,6 +2498,224 @@ export function apply (ctx, rawConfig = {}) {
       }
     },
   }))
+
+  /**
+   * Read the optional `force` flag from a small JSON request body.
+   *
+   * The body is read asynchronously with a hard size cap: an unread body keeps
+   * the socket open, and a restart route must not become a way to feed the Host
+   * unbounded input.
+   * @param request incoming HTTP request.
+   * @returns whether the caller asked to restart despite live work.
+   */
+  function readForcedFlag (request) {
+    return new Promise((resolve) => {
+      const chunks = []
+      let size = 0
+      let settled = false
+      const finish = (value) => {
+        if (settled) return
+        settled = true
+        resolve(value)
+      }
+      request.on('data', (chunk) => {
+        size += chunk.length
+        if (size > 8192) {
+          finish(false)
+          request.destroy()
+          return
+        }
+        chunks.push(chunk)
+      })
+      request.on('end', () => {
+        if (chunks.length === 0) {
+          finish(false)
+          return
+        }
+        try {
+          const parsed = JSON.parse(Buffer.concat(chunks).toString('utf8'))
+          finish(parsed !== null && typeof parsed === 'object' && parsed.force === true)
+        } catch {
+          finish(false)
+        }
+      })
+      request.on('error', () => finish(false))
+      request.on('close', () => finish(false))
+    })
+  }
+
+  /**
+   * Whether stopping the Host right now would interrupt live work.
+   *
+   * Mirrors the check the Desktop shell itself makes before it restarts: an
+   * agent that is generating, an inbox with a queued turn or step, or a running
+   * background job. Restarting through any of those would cut a reply in half
+   * and leave the user with a truncated turn, so the button refuses instead of
+   * doing it silently.
+   * @returns a short human-readable reason, or undefined when nothing is live.
+   */
+  function liveWorkReason () {
+    const liveAgents = typeof ctx.agents?.list === 'function' ? ctx.agents.list() : []
+    const jobs = ctx.get('jobs')
+    const running = liveAgents.find((agent) => agent.status === 'running')
+    if (running !== undefined) return 'a session is generating a reply'
+    const queued = liveAgents.find((agent) => (agent.inbox?.nextTurn?.length ?? 0) > 0 || (agent.inbox?.nextStep?.length ?? 0) > 0)
+    if (queued !== undefined) return 'a session has queued work'
+    if (jobs !== undefined && jobs !== null && typeof jobs.list === 'function') {
+      const owners = [undefined, ...liveAgents]
+      const busy = owners.some((agent) => {
+        try {
+          return jobs.list(agent?.id).some((job) => job.status === 'running' || job.status === 'stopping')
+        } catch {
+          return false
+        }
+      })
+      if (busy) return 'a background job is running'
+    }
+    return undefined
+  }
+
+  /**
+   * Process-control routes for the two conversation-header buttons.
+   *
+   * `GET /workspace-organizer/restart` reports whether a restart is possible and
+   * the current boot id; `POST` schedules the full-process restart.
+   *
+   * Restarting means the whole DSH process ends and starts again — that is what
+   * the button is for (load a new plugin build, drop every cached service).
+   *
+   * The subtlety is the desktop shell: it owns the Host as a child process and
+   * turns any child exit into a NATIVE "startup failed" message box, which no
+   * page overlay can cover. So the helper ends the Electron main process FIRST —
+   * the only code that can raise that dialog — and the Host then follows through
+   * its own clean shutdown when its IPC channel drops. Only after the whole tree
+   * is gone does the helper relaunch the application.
+   *
+   * Both methods are loopback-only and same-origin: restarting is process
+   * control, and nothing off this machine should be able to trigger it.
+   */
+  ctx.effect(() => {
+    const server = ctx.get('webServer')
+    if (server === undefined || server === null || typeof server.register !== 'function') {
+      ctx.logger.warn('workspace-organizer: webServer unavailable; restart button disabled')
+      return () => {}
+    }
+    const state = restartState()
+    const boot = bootId()
+    const home = config.dshHome !== '' ? config.dshHome : dirname(config.sessionsRoot)
+    const logDir = home === '' ? undefined : restartLogDir(home)
+    let restarting = false
+    // Proving the parent is the Desktop shell costs a synchronous process query
+    // on Windows, so it is resolved at most once and never on the status route:
+    // the client polls that route every 800ms during a restart, and blocking the
+    // event loop there would stall the very shutdown the poll is waiting for.
+    // Resolution starts at plugin load so the value is normally ready before any
+    // request arrives.
+    let resolvedShellPid
+    const shellOf = () => {
+      if (resolvedShellPid === undefined) resolvedShellPid = shellPid() ?? null
+      return resolvedShellPid
+    }
+    try {
+      setImmediate(() => { try { shellOf() } catch {} })
+    } catch {}
+
+    const sendJson = (response, statusCode, body) => {
+      const text = JSON.stringify(body)
+      response.writeHead(statusCode, {
+        'content-type': 'application/json; charset=utf-8',
+        'cache-control': 'no-store',
+        'content-length': String(Buffer.byteLength(text)),
+      })
+      response.end(text)
+    }
+
+    const describe = (request) => ({
+      ok: true,
+      mode: 'restart',
+      boot,
+      revision: state.revision,
+      restarting,
+      restartable: isDirectLoopback(request),
+      pid: process.pid,
+      shellPid: resolvedShellPid === undefined ? null : resolvedShellPid,
+      parentPid: process.ppid,
+      shellBinary: process.env.DSH_DESKTOP_NODE_EXECUTABLE ?? null,
+      platform: process.platform,
+      electron: process.versions.electron !== undefined,
+      logDir,
+    })
+
+    const dispose = server.register({
+      kind: 'exact',
+      path: '/workspace-organizer/restart',
+      handler: async (request, response) => {
+        if (request.method === 'GET') {
+          sendJson(response, 200, describe(request))
+          return
+        }
+        if (request.method !== 'POST') {
+          response.writeHead(405, { allow: 'GET, POST' })
+          response.end()
+          return
+        }
+        if (!isDirectLoopback(request)) {
+          sendJson(response, 403, { ok: false, error: 'restart is limited to direct loopback requests' })
+          return
+        }
+        if (!isSameOrigin(request)) {
+          sendJson(response, 403, { ok: false, error: 'restart requires a same-origin request' })
+          return
+        }
+        if (restarting) {
+          sendJson(response, 409, { ok: false, error: 'restart already scheduled' })
+          return
+        }
+        if (activeOperations > 0) {
+          sendJson(response, 409, { ok: false, error: 'cannot restart while a workspace operation is running' })
+          return
+        }
+        // A restart kills the Host mid-flight, so anything in progress loses its
+        // work. Refuse rather than silently truncating a reply or a job — unless
+        // the caller explicitly forces it, which is how a wedged session gets
+        // restarted.
+        const forced = await readForcedFlag(request)
+        const busyReason = liveWorkReason()
+        if (busyReason !== undefined && !forced) {
+          sendJson(response, 409, { ok: false, busy: true, error: busyReason })
+          return
+        }
+        restarting = true
+        const port = servingPort(request)
+        Promise.resolve()
+          .then(() => scheduleRestart(shellOf(), port, home))
+          .then((scheduled) => {
+            // Reply before the tree goes down: nothing survives to write it later.
+            sendJson(response, 202, {
+              ok: true,
+              mode: 'restart',
+              boot,
+              pid: process.pid,
+              helperPid: scheduled.helperPid,
+              target: scheduled.target,
+              logs: scheduled.logs,
+              message: 'restart scheduled',
+            })
+          })
+          .catch((error) => {
+            restarting = false
+            ctx.logger.warn('workspace-organizer: restart failed', error)
+            sendJson(response, 500, {
+              ok: false,
+              error: error instanceof Error ? error.message : String(error),
+            })
+          })
+      },
+    })
+    return () => {
+      try { dispose() } catch {}
+    }
+  })
 
   void processPendingAttach().then((unresolved) => {
     if (unresolved > 0) schedulePendingAttach(0)

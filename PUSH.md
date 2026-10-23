@@ -2,6 +2,12 @@
 
 这个目录已经是一份可以直接 `git init` 的仓库。下面按顺序做完即可。
 
+## 当前版本：1.18.0
+
+相对已发布的 1.0.0，这一版新增了顶栏整进程重启（确认框 + 忙时守卫 + 进度层）和会话迁移的未解析文件预览/合并。完整说明见 `CHANGELOG.md`，GitHub Release 正文可直接抄 `## 1.18.0` 那一节。
+
+发版三步：改 `package.json` 的 `version` → `npm publish` → 打 `v1.18.0` tag 建 Release。
+
 ## 0. 占位符已填好
 
 作者名和仓库地址都已替换成 `dream-fish69`：`package.json` 的 `author` / `repository` / `homepage` / `bugs`，`README.md` 与 `README.zh.md` 的安装命令，以及 `LICENSE` 的版权行。
@@ -110,13 +116,6 @@ dsh plugin --profile web add link:"D:\study\DSH-WORKSPEACE\releted to plugins\ds
 
 ## 附：关于包名
 
-`dsh-workspace-organizer` 这个名字在 npm 上已被另一个插件占用（Wang993，功能是会话标签 + 归档，与本插件源码无关），所以这里用了 `dsh-session-workspace-organizer`（npm 上确认可用）。
+本项目统一使用 **`dsh-session-workspace-organizer`**。
 
-如果那个包就是你自己的，想继续用原名，改这 4 处即可：
-
-1. `package.json` → `"name"`（及 `repository` / `homepage` / `bugs` 的仓库地址）
-2. `cordis.patch.yml` → `name:` 行
-3. `client.js` 第 2 行 → `id:`
-4. `index.js` → `'node_modules', '<包名>', 'package.json'` 与 `sessions/README.md` 模板里那句"由 DSH 插件 … 维护"
-
-若沿用旧包，版本请发 `2.0.0`：功能已从"标签归档"整体换成"目录迁移 + 会话目录"，属于不兼容变更。
+`dsh-workspace-organizer` 是 npm 上另一个插件（Wang993，会话标签 + 归档），与本项目源码无关，也不是本项目的旧版本或别名。源码包名、`cordis.patch.yml`、`client.js` 的 `id`、`index.js` 的包名引用、README、安装命令、npm 包和 GitHub 仓库都使用 **`dsh-session-workspace-organizer`**，不要再改回旧名。

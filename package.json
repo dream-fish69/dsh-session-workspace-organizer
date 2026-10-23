@@ -1,7 +1,7 @@
 {
   "name": "dsh-session-workspace-organizer",
-  "version": "1.0.0",
-  "description": "Move a DSH workspace folder to a new path and give every new session its own output folder under sessions/.",
+  "version": "1.18.0",
+  "description": "Move a DSH workspace folder to a new path, give every new session its own output folder under sessions/, and restart the desktop app from the header.",
   "type": "module",
   "main": "index.js",
   "icon": "./icon.svg",
@@ -30,7 +30,8 @@
     "workspace",
     "relocate",
     "session-folders",
-    "organizer"
+    "organizer",
+    "restart"
   ],
   "dsh": {
     "bundle": {
@@ -53,8 +54,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "check": "node --check index.js && node --check client.js && node --check lib/fs-ops.js && node --check lib/session-logs.js && node --test tests/fs-ops.test.mjs tests/session-logs.test.mjs",
-    "test": "node --test tests/fs-ops.test.mjs tests/session-logs.test.mjs",
+    "check": "node --check index.js && node --check client.js && node --check lib/fs-ops.js && node --check lib/session-logs.js && node --check lib/restart.js",
+    "test": "node --test tests/",
     "pack": "npm pack"
   },
   "author": {
